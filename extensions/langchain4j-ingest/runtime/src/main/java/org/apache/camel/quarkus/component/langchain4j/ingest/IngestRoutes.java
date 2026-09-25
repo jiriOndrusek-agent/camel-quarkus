@@ -106,7 +106,9 @@ public class IngestRoutes extends IngestPipelineRouteBuilder {
                     pipeline == null ? IngestBuildTimeConfig.DEFAULT_EMBEDDING_BATCH_SIZE : pipeline.embeddingBatchSize(),
                     pipeline == null ? IngestBuildTimeConfig.DEFAULT_MAX_DOCUMENT_SIZE : pipeline.maxDocumentSize(),
                     pipeline == null ? null : pipeline.documentSplitter().orElse(null),
-                    pipeline == null ? null : pipeline.parser().orElse(null)));
+                    pipeline == null ? null : pipeline.parser().orElse(null),
+                    pipeline == null ? null : pipeline.modality(),
+                    pipeline == null ? null : pipeline.contentType().orElse(null)));
         }
 
         for (IngestBuilderPipelines.Entry entry : builderPipelines.entries()) {
@@ -151,7 +153,9 @@ public class IngestRoutes extends IngestPipelineRouteBuilder {
                 definition.embeddingBatchSize(),
                 definition.maxDocumentSize(),
                 definition.documentSplitterName().orElse(null),
-                definition.parser().orElse(null));
+                definition.parser().orElse(null),
+                definition.modality().orElse(null),
+                definition.contentType().orElse(null));
     }
 
     /**
@@ -162,7 +166,7 @@ public class IngestRoutes extends IngestPipelineRouteBuilder {
             IngestRunTimeConfig.PipelineRunTimeConfig runtime,
             EmbeddingStore<TextSegment> store, EmbeddingModel model,
             int maxSegmentSize, int maxOverlapSize, int embeddingBatchSize, int maxDocumentSize,
-            String documentSplitterName, String parser) {
+            String documentSplitterName, String parser, String modality, String contentType) {
 
         IngestPipelineDefinition definition;
         if (uri == null) {
@@ -185,6 +189,12 @@ public class IngestRoutes extends IngestPipelineRouteBuilder {
         }
         if (parser != null) {
             definition.parser(parser);
+        }
+        if (modality != null) {
+            definition.modality(modality);
+        }
+        if (contentType != null) {
+            definition.contentType(contentType);
         }
 
         String documentId = runtime == null ? null : runtime.source().documentId().orElse(null);

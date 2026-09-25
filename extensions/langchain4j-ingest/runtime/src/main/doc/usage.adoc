@@ -115,6 +115,24 @@ A missing parser extension fails the build naming the artifact, the same way a m
 The Java twin is `IngestPipeline.parser("tika")`, and a consumer-fed pipeline parses the same way — the payload the consumer delivers goes to the parser first.
 With a parser, `max-document-size` also rejects a raw payload larger than the cap (in bytes) before it reaches the parser, on top of capping the extracted text (in characters).
 
+=== Ingesting media: images, audio, video and PDF
+
+`modality=media` embeds each document whole, as one vector, instead of reading it as text: the bytes go to a multimodal embedding model as audio, an image, video or a PDF, told apart by the MIME type, and the vector is stored with a placeholder segment whose text is the document id, stamped with the usual identity metadata, so retrieval cites it like any other.
+The model must declare the matching content type in its `supportedContentTypes()`: the pipeline fails to start with a text-only model, and a document whose medium the model does not declare fails before its bytes are read.
+`parser` and `document-splitter` must not be set, the splitter sizes do not apply, and `max-document-size` counts bytes.
+
+[source,properties]
+----
+quarkus.camel.langchain4j.ingest.photos.source.directory=/var/data/photos
+quarkus.camel.langchain4j.ingest.photos.modality=media
+quarkus.camel.langchain4j.ingest.photos.embedding-model=my-multimodal-model
+quarkus.camel.langchain4j.ingest.photos.embedding-store=photos
+----
+
+The MIME type handed to the model comes from `content-type` or, when unset, from the file extension (wav, mp3, flac, ogg, oga, opus, m4a, aac, aiff and webm for audio; png, jpg, jpeg, gif and webp for images; mp4 and mov for video; pdf); a file whose type cannot be determined fails the exchange.
+Images are embedded today by several LangChain4j providers; no provider embeds audio out of the box yet, so an audio model is a CDI bean of your own that declares `AUDIO` — typically a client of an audio embedding service — and either way the same bean embeds the query image or clip at retrieval time.
+The Java twin is `IngestPipeline.modality("media")`, and a consumer-fed pipeline embeds the delivered payload the same way.
+
 === Other sources, declared in Java
 
 Any Camel consumer can feed a pipeline — the roughly 300 components, each with its own options and its own documentation.

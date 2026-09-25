@@ -361,6 +361,30 @@ class Langchain4jIngestProcessor {
                         "Ingestion pipeline '" + entry.getKey() + "': max-document-size must not be negative, 0 "
                                 + "meaning no limit (got " + pipeline.maxDocumentSize() + ")")));
             }
+
+            String modality = pipeline.modality();
+            if (!IngestPipeline.SUPPORTED_MODALITIES.contains(modality)) {
+                validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
+                        "Ingestion pipeline '" + entry.getKey() + "' sets modality '" + modality
+                                + "'. Supported modalities: "
+                                + IngestPipeline.SUPPORTED_MODALITIES.stream().sorted()
+                                        .collect(Collectors.joining(", ")))));
+            } else if ("media".equals(modality)) {
+                // a media document is embedded whole: nothing to parse, nothing to split
+                if (pipeline.parser().isPresent()) {
+                    validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
+                            "Ingestion pipeline '" + entry.getKey() + "' sets modality 'media' together with parser '"
+                                    + pipeline.parser().get() + "'. A media document is embedded whole and never"
+                                    + " parsed; remove one of them.")));
+                }
+                if (pipeline.documentSplitter().isPresent()) {
+                    validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
+                            "Ingestion pipeline '" + entry.getKey()
+                                    + "' sets modality 'media' together with document-splitter '"
+                                    + pipeline.documentSplitter().get() + "'. A media document is embedded whole"
+                                    + " and never split; remove one of them.")));
+                }
+            }
         }
     }
 }

@@ -61,6 +61,25 @@ final class IngestPipelineDefinition {
             .map(parser -> parser.name().toLowerCase(Locale.ROOT))
             .collect(Collectors.toUnmodifiableSet());
 
+    /** What the consumed payload is; the configuration value is the lower-case name. */
+    public enum Modality {
+        TEXT,
+        MEDIA;
+
+        static Modality of(String value) {
+            try {
+                return valueOf(value.toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException(
+                        "modality must be one of " + SUPPORTED_MODALITIES + " (got '" + value + "')");
+            }
+        }
+    }
+
+    public static final Set<String> SUPPORTED_MODALITIES = Arrays.stream(Modality.values())
+            .map(modality -> modality.name().toLowerCase(Locale.ROOT))
+            .collect(Collectors.toUnmodifiableSet());
+
     private final String name;
     private final String directory;
     private final String uri;
@@ -68,6 +87,8 @@ final class IngestPipelineDefinition {
     private boolean recursive = true;
     private String documentId;
     private Parser parser;
+    private Modality modality = Modality.TEXT;
+    private String contentType;
     private int maxSegmentSize = IngestBuildTimeConfig.DEFAULT_MAX_SEGMENT_SIZE;
     private int maxOverlapSize = IngestBuildTimeConfig.DEFAULT_MAX_OVERLAP_SIZE;
     private int embeddingBatchSize = IngestBuildTimeConfig.DEFAULT_EMBEDDING_BATCH_SIZE;
@@ -162,6 +183,31 @@ final class IngestPipelineDefinition {
             throw new IllegalArgumentException("Ingestion pipeline parser must not be null");
         }
         this.parser = parser;
+        return this;
+    }
+
+    /**
+     * What the consumed payload is: {@code text} is split and embedded segment by segment, {@code media} — audio, an
+     * image, video or a PDF, told apart by the MIME type — is embedded whole, as one vector, by a model that declares
+     * the matching content type.
+     */
+    public IngestPipelineDefinition modality(String modality) {
+        this.modality = Modality.of(requireText(modality, "modality"));
+        return this;
+    }
+
+    /** The typed twin of {@link #modality(String)}. */
+    public IngestPipelineDefinition modality(Modality modality) {
+        if (modality == null) {
+            throw new IllegalArgumentException("Ingestion pipeline modality must not be null");
+        }
+        this.modality = modality;
+        return this;
+    }
+
+    /** MIME type of a media payload; unset, it is derived from the document id's file extension. */
+    public IngestPipelineDefinition contentType(String contentType) {
+        this.contentType = requireText(contentType, "contentType");
         return this;
     }
 
@@ -303,6 +349,14 @@ final class IngestPipelineDefinition {
 
     Parser parser() {
         return parser;
+    }
+
+    Modality modality() {
+        return modality;
+    }
+
+    String contentType() {
+        return contentType;
     }
 
     int maxSegmentSize() {

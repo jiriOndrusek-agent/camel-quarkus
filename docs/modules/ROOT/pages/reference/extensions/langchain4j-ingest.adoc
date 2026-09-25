@@ -166,6 +166,25 @@ A missing parser extension fails the build naming the artifact, the same way a m
 The Java twin is `IngestPipeline.parser("tika")`, and a consumer-fed pipeline parses the same way — the payload the consumer delivers goes to the parser first.
 With a parser, `max-document-size` also rejects a raw payload larger than the cap (in bytes) before it reaches the parser, on top of capping the extracted text (in characters).
 
+[id="extensions-langchain4j-ingest-usage-ingesting-media-images-audio-video-and-pdf"]
+=== Ingesting media: images, audio, video and PDF
+
+`modality=media` embeds each document whole, as one vector, instead of reading it as text: the bytes go to a multimodal embedding model as audio, an image, video or a PDF, told apart by the MIME type, and the vector is stored with a placeholder segment whose text is the document id, stamped with the usual identity metadata, so retrieval cites it like any other.
+The model must declare the matching content type in its `supportedContentTypes()`: the pipeline fails to start with a text-only model, and a document whose medium the model does not declare fails before its bytes are read.
+`parser` and `document-splitter` must not be set, the splitter sizes do not apply, and `max-document-size` counts bytes.
+
+[source,properties]
+----
+quarkus.camel.langchain4j.ingest.photos.source.directory=/var/data/photos
+quarkus.camel.langchain4j.ingest.photos.modality=media
+quarkus.camel.langchain4j.ingest.photos.embedding-model=my-multimodal-model
+quarkus.camel.langchain4j.ingest.photos.embedding-store=photos
+----
+
+The MIME type handed to the model comes from `content-type` or, when unset, from the file extension (wav, mp3, flac, ogg, oga, opus, m4a, aac, aiff and webm for audio; png, jpg, jpeg, gif and webp for images; mp4 and mov for video; pdf); a file whose type cannot be determined fails the exchange.
+Images are embedded today by several LangChain4j providers; no provider embeds audio out of the box yet, so an audio model is a CDI bean of your own that declares `AUDIO` — typically a client of an audio embedding service — and either way the same bean embeds the query image or clip at retrieval time.
+The Java twin is `IngestPipeline.modality("media")`, and a consumer-fed pipeline embeds the delivered payload the same way.
+
 [id="extensions-langchain4j-ingest-usage-other-sources-declared-in-java"]
 === Other sources, declared in Java
 
@@ -274,6 +293,28 @@ structure-preserving markdown through a Docling Serve instance (configure it wit
 `camel.component.docling.*`). When not set, the payload is read as text as-is. Each
 value needs its extension on the classpath: `camel-quarkus-tika` or
 `camel-quarkus-docling`.
+| `string`
+| 
+
+a|icon:lock[title=Fixed at build time] [[quarkus-camel-langchain4j-ingest-pipeline-name-modality]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-modality[quarkus.camel.langchain4j.ingest."pipeline-name".modality]`
+
+What the consumed payload is. `text`, the default, is read as a String, split into
+segments and embedded segment by segment. `media` is read as bytes and embedded whole,
+as one vector: audio, an image, video or a PDF, told apart by the MIME type, each
+needing an embedding model that declares the matching content type — the pipeline
+fails to start with a text-only model. In media mode `parser` and `document-splitter`
+must not be set, the splitter sizes do not apply, and `max-document-size` counts
+bytes.
+| `string`
+| `text`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-camel-langchain4j-ingest-pipeline-name-content-type]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-content-type[quarkus.camel.langchain4j.ingest."pipeline-name".content-type]`
+
+MIME type of a media payload, such as `audio/wav` or `image/png`, handed to the
+embedding model. When not set, it is derived from the document id's file extension
+(wav, mp3, flac, ogg, oga, opus, m4a, aac, aiff, webm, png, jpg, jpeg, gif, webp, mp4,
+mov, pdf); a document whose type cannot be determined, or whose medium the model does
+not declare, fails the exchange. Only used with `modality=media`.
 | `string`
 | 
 

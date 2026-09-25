@@ -88,6 +88,20 @@ abstract class IngestPipelineRouteBuilder extends RouteBuilder {
     }
 
     private void configurePipeline(IngestPipelineDefinition pipeline) {
+        if (pipeline.modality() == IngestPipelineDefinition.Modality.MEDIA) {
+            // a media document is embedded whole: nothing to parse, nothing to split. The
+            // configuration path reports both at build time; this catches the builder path
+            if (pipeline.parser() != null) {
+                throw new IllegalArgumentException("Ingestion pipeline '" + pipeline.name()
+                        + "' sets modality 'media' together with a parser. A media document is embedded whole and"
+                        + " never parsed; remove one of them.");
+            }
+            if (pipeline.documentSplitterRef() != null) {
+                throw new IllegalArgumentException("Ingestion pipeline '" + pipeline.name()
+                        + "' sets modality 'media' together with a document splitter. A media document is embedded"
+                        + " whole and never split; remove one of them.");
+            }
+        }
         requireParserComponent(pipeline);
         String storeRef = bindInstance(pipeline.embeddingStore(), pipeline.embeddingStoreRef(), pipeline, "store");
         String modelRef = bindInstance(pipeline.embeddingModel(), pipeline.embeddingModelRef(), pipeline, "model");
@@ -291,9 +305,9 @@ abstract class IngestPipelineRouteBuilder extends RouteBuilder {
         options.put("idempotentKey", "${file:absolute.path}:${file:modified}:${file:size}");
         options.put("recursive", String.valueOf(pipeline.recursive()));
         options.put("readLock", "changed");
-        if (pipeline.parser() == null) {
-            // text is read as UTF-8; a parser receives the raw bytes instead - the format is its
-            // business, and a charset conversion would corrupt a binary document
+        if (pipeline.parser() == null && pipeline.modality() != IngestPipelineDefinition.Modality.MEDIA) {
+            // text is read as UTF-8; a parser or a media model receives the raw bytes instead -
+            // the format is its business, and a charset conversion would corrupt a binary document
             options.put("charset", "UTF-8");
         }
         return "file:" + pipeline.directory() + "?" + queryString(options);
@@ -306,9 +320,17 @@ abstract class IngestPipelineRouteBuilder extends RouteBuilder {
         if (documentIdHeader != null) {
             options.put("documentIdHeader", documentIdHeader);
         }
-        options.put("maxSegmentSize", String.valueOf(pipeline.maxSegmentSize()));
-        options.put("maxOverlapSize", String.valueOf(pipeline.maxOverlapSize()));
-        options.put("embeddingBatchSize", String.valueOf(pipeline.embeddingBatchSize()));
+        if (pipeline.modality() == IngestPipelineDefinition.Modality.MEDIA) {
+            // embedded whole: the splitter options do not apply
+            options.put("modality", "media");
+            if (pipeline.contentType() != null) {
+                options.put("contentType", pipeline.contentType());
+            }
+        } else {
+            options.put("maxSegmentSize", String.valueOf(pipeline.maxSegmentSize()));
+            options.put("maxOverlapSize", String.valueOf(pipeline.maxOverlapSize()));
+            options.put("embeddingBatchSize", String.valueOf(pipeline.embeddingBatchSize()));
+        }
         if (pipeline.maxDocumentSize() > 0) {
             options.put("maxDocumentSize", String.valueOf(pipeline.maxDocumentSize()));
         }

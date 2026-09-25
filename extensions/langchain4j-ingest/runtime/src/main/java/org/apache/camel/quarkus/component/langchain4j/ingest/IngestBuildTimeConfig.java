@@ -71,6 +71,27 @@ public interface IngestBuildTimeConfig {
         Optional<String> parser();
 
         /**
+         * What the consumed payload is. `text`, the default, is read as a String, split into
+         * segments and embedded segment by segment. `media` is read as bytes and embedded whole,
+         * as one vector: audio, an image, video or a PDF, told apart by the MIME type, each
+         * needing an embedding model that declares the matching content type — the pipeline
+         * fails to start with a text-only model. In media mode `parser` and `document-splitter`
+         * must not be set, the splitter sizes do not apply, and `max-document-size` counts
+         * bytes.
+         */
+        @WithDefault("text")
+        String modality();
+
+        /**
+         * MIME type of a media payload, such as `audio/wav` or `image/png`, handed to the
+         * embedding model. When not set, it is derived from the document id's file extension
+         * (wav, mp3, flac, ogg, oga, opus, m4a, aac, aiff, webm, png, jpg, jpeg, gif, webp, mp4,
+         * mov, pdf); a document whose type cannot be determined, or whose medium the model does
+         * not declare, fails the exchange. Only used with `modality=media`.
+         */
+        Optional<String> contentType();
+
+        /**
          * Name of the `EmbeddingStore` bean to write to. When not set, the only one present is
          * used.
          */

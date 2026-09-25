@@ -90,6 +90,14 @@ public class IngestResource {
     EmbeddingStore<TextSegment> cappedStore;
 
     @Inject
+    @Named("audio-store")
+    EmbeddingStore<TextSegment> audioStore;
+
+    @Inject
+    @Named("audio-model")
+    DeterministicAudioEmbeddingModel audioModel;
+
+    @Inject
     ProducerTemplate producerTemplate;
 
     @Inject
@@ -106,6 +114,9 @@ public class IngestResource {
 
     @ConfigProperty(name = "ingest.capped.directory")
     String cappedDirectory;
+
+    @ConfigProperty(name = "ingest.audio.directory")
+    String audioDirectory;
 
     /** Asserts a key was committed; registry lookup by name, the same way the pipelines resolve. */
     @GET
@@ -136,6 +147,7 @@ public class IngestResource {
         Path dir = Path.of(switch (pipeline) {
         case "scans" -> scansDirectory;
         case "capped" -> cappedDirectory;
+        case "audio" -> audioDirectory;
         default -> reportsDirectory;
         });
         Files.createDirectories(dir);
@@ -165,6 +177,25 @@ public class IngestResource {
                 .queryEmbedding(model.embed(query).content())
                 .maxResults(1000)
                 .minScore(0.0)
+                .build());
+        return result.matches().stream()
+                .map(match -> new SearchHit(
+                        match.embedded().text(),
+                        match.embedded().metadata().getString(LangChain4jIngest.METADATA_PIPELINE),
+                        match.embedded().metadata().getString(LangChain4jIngest.METADATA_DOCUMENT_ID)))
+                .toList();
+    }
+
+    /** Query by audio: the clip is embedded with the audio model and the audio store searched for exact hits. */
+    @POST
+    @jakarta.ws.rs.Path("/search/audio")
+    @Consumes(MediaType.APPLICATION_OCTET_STREAM)
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<SearchHit> searchAudio(byte[] clip) {
+        var result = audioStore.search(EmbeddingSearchRequest.builder()
+                .queryEmbedding(audioModel.embeddingOf(clip))
+                .maxResults(10)
+                .minScore(0.99)
                 .build());
         return result.matches().stream()
                 .map(match -> new SearchHit(
