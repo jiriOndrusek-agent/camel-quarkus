@@ -28,10 +28,15 @@ public final class IngestPipeline {
     /** The values {@link #parser(String)} and the {@code parser} configuration property accept. */
     public static final Set<String> SUPPORTED_PARSERS = IngestPipelineDefinition.SUPPORTED_PARSERS;
 
+    /** The values {@link #modality(String)} and the {@code modality} configuration property accept. */
+    public static final Set<String> SUPPORTED_MODALITIES = IngestPipelineDefinition.SUPPORTED_MODALITIES;
+
     private final Source source;
     private String embeddingStoreName;
     private String embeddingModelName;
     private String parser;
+    private String modality;
+    private String contentType;
     private int maxSegmentSize = IngestBuildTimeConfig.DEFAULT_MAX_SEGMENT_SIZE;
     private int maxOverlapSize = IngestBuildTimeConfig.DEFAULT_MAX_OVERLAP_SIZE;
     private int embeddingBatchSize = IngestBuildTimeConfig.DEFAULT_EMBEDDING_BATCH_SIZE;
@@ -123,6 +128,31 @@ public final class IngestPipeline {
         return this;
     }
 
+    /**
+     * What the consumed payload is: {@code text}, the default, is split and embedded segment by
+     * segment; {@code media} (audio, an image, video or a PDF, told apart by the MIME type) is
+     * embedded whole, as one vector, by a model that declares the matching content type. The
+     * twin of the {@code modality} configuration property.
+     */
+    public IngestPipeline modality(String modality) {
+        // the same rule the configuration path is held to at build time
+        if (modality == null || !SUPPORTED_MODALITIES.contains(modality)) {
+            throw new IllegalArgumentException("modality must be one of " + SUPPORTED_MODALITIES
+                    + " (got '" + modality + "')");
+        }
+        this.modality = modality;
+        return this;
+    }
+
+    /**
+     * MIME type of a media payload, such as {@code audio/wav}; unset, it is derived from the
+     * document id's file extension. The twin of the {@code content-type} configuration property.
+     */
+    public IngestPipeline contentType(String contentType) {
+        this.contentType = contentType;
+        return this;
+    }
+
     String sourceType() {
         return source.type();
     }
@@ -141,6 +171,14 @@ public final class IngestPipeline {
 
     Optional<String> parser() {
         return Optional.ofNullable(parser);
+    }
+
+    Optional<String> modality() {
+        return Optional.ofNullable(modality);
+    }
+
+    Optional<String> contentType() {
+        return Optional.ofNullable(contentType);
     }
 
     int maxSegmentSize() {
