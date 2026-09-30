@@ -33,6 +33,8 @@
 
     <properties>
         <cq.jdbcKind>mssql</cq.jdbcKind>
+        <!-- Extra JVM args appended to the native IT runner arg-line; the fips profile fills it to force TLS 1.2 -->
+        <cq.fips.argline></cq.fips.argline>
     </properties>
 
     <dependencies>
@@ -162,7 +164,7 @@
                         </executions>
                         <configuration>
                             <systemPropertyVariables>
-                                <quarkus.test.arg-line>-Dcq.jdbcKind=${cq.jdbcKind}</quarkus.test.arg-line>
+                                <quarkus.test.arg-line>-Dcq.jdbcKind=${cq.jdbcKind} ${cq.fips.argline}</quarkus.test.arg-line>
                             </systemPropertyVariables>
                         </configuration>
                     </plugin>
@@ -268,6 +270,43 @@
             <properties>
                 <skipTests>true</skipTests>
             </properties>
+        </profile>
+        <profile>
+            <id>fips</id>
+            <activation>
+                <property>
+                    <name>fips</name>
+                </property>
+            </activation>
+            <properties>
+                <!-- Force TLS 1.2 in the native IT runner too (appended to quarkus.test.arg-line). SQL Server 2025 also
+                     offers TLS 1.3, which mssql-jdbc mishandles during the prelogin handshake
+                     (https://github.com/microsoft/mssql-jdbc/issues/1524, https://github.com/microsoft/mssql-jdbc/issues/2149),
+                     breaking connections on FIPS hosts. TLS 1.2 is FIPS compliant. -->
+                <cq.fips.argline>-Djdk.tls.client.protocols=TLSv1.2</cq.fips.argline>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <jdk.tls.client.protocols>TLSv1.2</jdk.tls.client.protocols>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <jdk.tls.client.protocols>TLSv1.2</jdk.tls.client.protocols>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>

@@ -283,7 +283,7 @@
         <smb.container.image>quay.io/jamesnetherton/camel-smb-test-server:2.0.0</smb.container.image>
         <solr.container.image>mirror.gcr.io/solr:9.10.1-slim</solr.container.image>
         <splunk.container.image>mirror.gcr.io/splunk/splunk:9.4.7</splunk.container.image>
-        <sql-server.container.image>mcr.microsoft.com/mssql/server:2025-latest</sql-server.container.image>
+        <sql-server.container.image>mcr.microsoft.com/mssql/rhel/server:2025-latest</sql-server.container.image>
         <weaviate.container.image>mirror.gcr.io/semitechnologies/weaviate:1.37.4</weaviate.container.image>
 
         <!-- Plugin configuration through properties  -->

@@ -36,8 +36,10 @@ import org.testcontainers.utility.DockerImageName;
 
 public class DebeziumSqlserverTestResource extends AbstractDebeziumTestResource<MSSQLServerContainer> {
     private static final Logger LOG = Logger.getLogger(DebeziumSqlserverTestResource.class);
+    // asCompatibleSubstituteFor is needed because the RHEL based image path differs from the one Testcontainers expects
     private static final DockerImageName DOCKER_IMAGE_NAME = DockerImageName
-            .parse(ConfigProvider.getConfig().getValue("sql-server.container.image", String.class));
+            .parse(ConfigProvider.getConfig().getValue("sql-server.container.image", String.class))
+            .asCompatibleSubstituteFor("mcr.microsoft.com/mssql/server");
     private static final int DB_PORT = 1433;
     private Path historyFile;
 

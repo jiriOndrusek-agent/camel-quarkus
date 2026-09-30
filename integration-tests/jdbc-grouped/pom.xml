@@ -303,6 +303,11 @@
                         <configuration>
                             <systemPropertyVariables>
                                 <quarkus.datasource.mysql.devservices.enabled>false</quarkus.datasource.mysql.devservices.enabled>
+                                <!-- Force TLS 1.2. SQL Server 2025 also offers TLS 1.3, which mssql-jdbc mishandles during
+                                     the prelogin handshake (https://github.com/microsoft/mssql-jdbc/issues/1524,
+                                     https://github.com/microsoft/mssql-jdbc/issues/2149), breaking connections on FIPS hosts.
+                                     TLS 1.2 is FIPS compliant. -->
+                                <jdk.tls.client.protocols>TLSv1.2</jdk.tls.client.protocols>
                             </systemPropertyVariables>
                         </configuration>
                     </plugin>
@@ -312,6 +317,8 @@
                         <configuration>
                             <systemPropertyVariables>
                                 <quarkus.datasource.mysql.devservices.enabled>false</quarkus.datasource.mysql.devservices.enabled>
+                                <jdk.tls.client.protocols>TLSv1.2</jdk.tls.client.protocols>
+                                <quarkus.test.arg-line>-Djdk.tls.client.protocols=TLSv1.2</quarkus.test.arg-line>
                             </systemPropertyVariables>
                         </configuration>
                     </plugin>
