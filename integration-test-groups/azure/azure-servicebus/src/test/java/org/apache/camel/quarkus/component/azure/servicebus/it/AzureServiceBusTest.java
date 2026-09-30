@@ -28,7 +28,8 @@ import java.util.stream.Stream;
 import com.azure.core.amqp.AmqpTransportType;
 import com.azure.core.util.BinaryData;
 import com.azure.messaging.servicebus.ServiceBusClientBuilder;
-import com.azure.messaging.servicebus.ServiceBusProcessorClient;
+import com.azure.messaging.servicebus.ServiceBusReceivedMessage;
+import com.azure.messaging.servicebus.ServiceBusReceiverClient;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
@@ -39,7 +40,7 @@ import org.apache.camel.quarkus.test.support.azure.AzureServiceBusTestResource;
 import org.awaitility.Awaitility;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -55,34 +56,45 @@ class AzureServiceBusTest {
 
     private static final Logger LOG = Logger.getLogger(AzureServiceBusTest.class);
 
-    @BeforeAll
-    public static void beforeAll() {
-        //this is not necessary for mocked testing
-        if (AzureServiceBusHelper.isMockBackEnd()) {
-            return;
-        }
+    // How long a single drain receive waits for the queue to yield a message before concluding it is empty.
+    private static final Duration DRAIN_RECEIVE_TIMEOUT = Duration.ofSeconds(1);
+    // Max time to wait for a sent message to reach its consumer. Generous because a freshly started consumer,
+    // especially with token credential authentication, can take a while to establish its receiver link.
+    private static final Duration MESSAGE_RECEIVE_TIMEOUT = Duration.ofMinutes(2);
 
-        // Drain the test queue in case there are messages lingering from previous failed runs
-        ServiceBusProcessorClient client = new ServiceBusClientBuilder()
+    @BeforeEach
+    public void beforeEach() {
+        // The queue is shared by all consumer routes. Drain it before every test so a message left behind or
+        // redelivered by a previous test cannot be picked up here and mask the message under test.
+        drainQueue();
+    }
+
+    private void drainQueue() {
+        // Drain the shared queue of messages lingering from previous runs or consumers. A pull receiver lets us stop
+        // as soon as the queue is empty (one short receive) instead of always waiting a fixed amount of time.
+        ServiceBusReceiverClient receiver = new ServiceBusClientBuilder()
                 .connectionString(AzureServiceBusHelper.getConnectionString())
-                .processor()
-                .processMessage(messageContext -> {
-                    LOG.infof("Purged old message: %s", messageContext.getMessage().getMessageId());
-                    messageContext.complete();
-                })
-                .processError(errorContext -> LOG.errorf(errorContext.getException(),
-                        "Error draining queue %s" + errorContext.getEntityPath()))
+                .receiver()
                 .queueName(AzureServiceBusHelper.getDestination("queue"))
-                .buildProcessorClient();
-
-        client.start();
+                .buildClient();
         try {
-            // We don't know how many messages there may be to drain so just sleep for enough time
-            Thread.sleep(5000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            int received;
+            do {
+                received = 0;
+                for (ServiceBusReceivedMessage message : receiver.receiveMessages(10, DRAIN_RECEIVE_TIMEOUT)) {
+                    received++;
+                    try {
+                        receiver.complete(message);
+                        LOG.infof("Purged old message: %s", message.getMessageId());
+                    } catch (Exception e) {
+                        // Best-effort cleanup: a failed completion (e.g. expired lock) must not fail the drain.
+                        // The message stays uncompleted and is redelivered later.
+                        LOG.warnf(e, "Could not complete drained message %s", message.getMessageId());
+                    }
+                }
+            } while (received > 0);
         } finally {
-            client.close();
+            receiver.close();
         }
     }
 
@@ -115,7 +127,7 @@ class AzureServiceBusTest {
                     .then()
                     .statusCode(201);
 
-            Awaitility.await().pollInterval(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).untilAsserted(() -> {
+            Awaitility.await().pollInterval(1, TimeUnit.SECONDS).atMost(MESSAGE_RECEIVE_TIMEOUT).untilAsserted(() -> {
                 RestAssured.given()
                         .queryParam("endpointUri", mockEndpointUri)
                         .get("/azure-servicebus/receive/messages")
@@ -160,7 +172,7 @@ class AzureServiceBusTest {
                     .then()
                     .statusCode(201);
 
-            Awaitility.await().pollInterval(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).untilAsserted(() -> {
+            Awaitility.await().pollInterval(1, TimeUnit.SECONDS).atMost(MESSAGE_RECEIVE_TIMEOUT).untilAsserted(() -> {
                 RestAssured.given()
                         .queryParam("endpointUri", mockEndpointUri)
                         .get("/azure-servicebus/receive/messages")
@@ -200,7 +212,7 @@ class AzureServiceBusTest {
                     .then()
                     .statusCode(201);
 
-            Awaitility.await().pollInterval(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).untilAsserted(() -> {
+            Awaitility.await().pollInterval(1, TimeUnit.SECONDS).atMost(MESSAGE_RECEIVE_TIMEOUT).untilAsserted(() -> {
                 RestAssured.given()
                         .queryParam("endpointUri", AzureServiceBusProducers.MOCK_ENDPOINT_URI)
                         .get("/azure-servicebus/receive/messages")
@@ -237,7 +249,7 @@ class AzureServiceBusTest {
                     .then()
                     .statusCode(201);
 
-            Awaitility.await().pollInterval(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).untilAsserted(() -> {
+            Awaitility.await().pollInterval(1, TimeUnit.SECONDS).atMost(MESSAGE_RECEIVE_TIMEOUT).untilAsserted(() -> {
                 RestAssured.given()
                         .queryParam("endpointUri", "mock:servicebus-token-credential-results")
                         .get("/azure-servicebus/receive/messages")
@@ -298,7 +310,7 @@ class AzureServiceBusTest {
             }
 
             // Message should be enqueued and eventually consumed
-            Awaitility.await().pollInterval(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).untilAsserted(() -> {
+            Awaitility.await().pollInterval(1, TimeUnit.SECONDS).atMost(MESSAGE_RECEIVE_TIMEOUT).untilAsserted(() -> {
                 RestAssured.given()
                         .queryParam("endpointUri", "mock:servicebus-queue-scheduled-consumer-results")
                         .get("/azure-servicebus/receive/messages")
@@ -337,7 +349,7 @@ class AzureServiceBusTest {
                     .then()
                     .statusCode(201);
 
-            Awaitility.await().pollInterval(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).untilAsserted(() -> {
+            Awaitility.await().pollInterval(1, TimeUnit.SECONDS).atMost(MESSAGE_RECEIVE_TIMEOUT).untilAsserted(() -> {
                 RestAssured.given()
                         .queryParam("endpointUri", "mock:servicebus-azure-identity-results")
                         .get("/azure-servicebus/receive/messages")
