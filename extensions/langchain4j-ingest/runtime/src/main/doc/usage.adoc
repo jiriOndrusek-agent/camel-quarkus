@@ -23,6 +23,21 @@ Replace and delete arrive with the synchronising engine in a later release.
 What is remembered is which documents were already ingested — the idempotent repository below.
 ====
 
+=== Filtering deliveries
+
+Not everything a source delivers belongs in a knowledge base.
+Per pipeline, `filter.include-id` and `filter.exclude-id` take comma-separated Ant-style patterns matched against the document id — exclusion wins, and a rejected delivery never reads the body or occupies its dedup claim.
+`filter.min-document-size` rejects documents too short to carry retrievable content, and `filter.document-filter` names a Camel `Predicate` bean evaluated with the body available.
+A rejected delivery is answered with a `filtered` outcome; the enforcement lives in the `camel-langchain4j-ingest` component.
+An `@Ingest` pipeline is filtered the same way: the builder has no filter methods, and the `filter.*` properties apply to it too.
+
+[source,properties]
+----
+quarkus.camel.langchain4j.ingest.products.filter.include-id=**/*.pdf,**/*.md
+quarkus.camel.langchain4j.ingest.products.filter.exclude-id=**/draft-*
+quarkus.camel.langchain4j.ingest.products.filter.min-document-size=100
+----
+
 === The idempotent repository
 
 A directory pipeline registers what it ingested, keyed on the file's path, modification time and size: unchanged files are skipped, edited files re-ingest (their previous segments remain, see the note above).
@@ -115,6 +130,24 @@ A missing parser extension fails the build naming the artifact, the same way a m
 The Java twin is `IngestPipeline.parser("tika")`, and a consumer-fed pipeline parses the same way — the payload the consumer delivers goes to the parser first.
 With a parser, `max-document-size` also rejects a raw payload larger than the cap (in bytes) before it reaches the parser, on top of capping the extracted text (in characters).
 
+=== Ingesting media: images, audio, video and PDF
+
+`modality=media` embeds each document whole, as one vector, instead of reading it as text: the bytes go to a multimodal embedding model as audio, an image, video or a PDF, told apart by the MIME type, and the vector is stored with a placeholder segment whose text is the document id, stamped with the usual identity metadata, so retrieval cites it like any other.
+The model must declare the matching content type in its `supportedContentTypes()`: the pipeline fails to start with a text-only model, and a document whose medium the model does not declare fails before its bytes are read.
+`parser` and `document-splitter` must not be set, the splitter sizes and `embedding-batch-size` do not apply, and `max-document-size` counts bytes.
+
+[source,properties]
+----
+quarkus.camel.langchain4j.ingest.photos.source.directory=/var/data/photos
+quarkus.camel.langchain4j.ingest.photos.modality=media
+quarkus.camel.langchain4j.ingest.photos.embedding-model=my-multimodal-model
+quarkus.camel.langchain4j.ingest.photos.embedding-store=photos
+----
+
+The MIME type handed to the model comes from `content-type` or, when unset, from the file extension through Camel's MIME table (wav, mp3, flac, ogg, opus, m4a, aac and aiff for audio; png, jpg, gif and webp for images; mp4, mov and webm for video; pdf); a file whose type cannot be determined fails the exchange, and `content-type` without `modality=media` is rejected like the parser and splitter conflicts.
+Images are embedded today by several LangChain4j providers; no provider embeds audio out of the box yet, so an audio model is a CDI bean of your own that declares `AUDIO` — typically a client of an audio embedding service — and either way the same bean embeds the query image or clip at retrieval time.
+The Java twin is `IngestPipeline.modality("media")`, and a consumer-fed pipeline embeds the delivered payload the same way.
+
 === Other sources, declared in Java
 
 Any Camel consumer can feed a pipeline — the roughly 300 components, each with its own options and its own documentation.
@@ -132,7 +165,8 @@ IngestPipeline events() {
 
 Typing `dsl.` lists a factory for every component, each completing its own typed options.
 The method runs once at startup; it must return `IngestPipeline`, take no parameters and use a name no configured pipeline uses.
-`enabled=false` in configuration switches a Java-declared pipeline off.
+`enabled=false` in configuration switches a Java-declared pipeline off, and the `filter.*` properties apply to it too.
+Other `source.*` properties are rejected for a Java-declared pipeline — except `source.recursive`, which cannot be told apart from its default and is silently ignored; use `Source.recursive()` instead.
 A component missing from the classpath fails at startup with an error naming the extension artifact that provides it — the DSL compiles regardless, since its factories all ship in one artifact.
 
 Ingestion needs a stable id per document, and where it lives is the consumer's business: `documentId` names the header — the record key `CamelKafkaKey` above, `CamelAwsS3Key` for S3 — or gives a simple-language expression.
@@ -151,6 +185,12 @@ quarkus.camel.langchain4j.ingest.s3docs.source.uri=aws2-s3://product-docs?region
 quarkus.camel.langchain4j.ingest.s3docs.source.document-id=CamelAwsS3Key
 quarkus.camel.langchain4j.ingest.s3docs.embedding-store=products
 ----
+
+=== The pipelines are Kamelet compositions
+
+Each pipeline is one route composed from the catalog's `langchain4j-ingest-file-source`, parser action and `langchain4j-ingest-sink` Kamelets; the engine is the `camel-langchain4j-ingest` component.
+They resolve through the regular Kamelet machinery, so overriding `camel.component.kamelet.location` without keeping `classpath:kamelets`, or shipping an equally named Kamelet, replaces internal steps — including the identity capture — and is advanced surgery.
+Startup verifies the needed Kamelets resolve and fails with an actionable error otherwise.
 
 === When ingestion fails
 
