@@ -16,7 +16,6 @@
  */
 package org.apache.camel.quarkus.component.langchain4j.ingest;
 
-import java.io.InputStream;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -38,7 +37,6 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.literal.NamedLiteral;
 import jakarta.inject.Inject;
 import org.apache.camel.CamelContextAware;
-import org.apache.camel.Exchange;
 import org.apache.camel.Expression;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
@@ -141,7 +139,9 @@ public class IngestRoutes extends RouteBuilder {
                     pipeline == null ? IngestBuildTimeConfig.DEFAULT_EMBEDDING_BATCH_SIZE : pipeline.embeddingBatchSize(),
                     pipeline == null ? IngestBuildTimeConfig.DEFAULT_MAX_DOCUMENT_SIZE : pipeline.maxDocumentSize(),
                     pipeline == null ? null : pipeline.documentSplitter().orElse(null),
-                    pipeline == null ? null : pipeline.parser().orElse(null));
+                    pipeline == null ? null : pipeline.parser().orElse(null),
+                    pipeline == null ? IngestBuildTimeConfig.DEFAULT_MODALITY : pipeline.modality(),
+                    pipeline == null ? null : pipeline.contentType().orElse(null));
         }
 
         for (IngestBuilderPipelines.Entry entry : builderPipelines.entries()) {
@@ -183,7 +183,7 @@ public class IngestRoutes extends RouteBuilder {
             LOG.infof("Ingestion pipeline '%s' (builder) is disabled", name);
             return;
         }
-        // enabled is the one thing configuration may say about a builder pipeline; anything about
+        // enabled and filter.* are what configuration may say about a builder pipeline; anything about
         // its source would be quietly overruled by the @Ingest method, so it is an error instead
         // (source.recursive cannot be told apart from its default, so it alone goes undetected -
         // Source.recursive() is its builder twin)
@@ -206,7 +206,9 @@ public class IngestRoutes extends RouteBuilder {
                 definition.embeddingBatchSize(),
                 definition.maxDocumentSize(),
                 definition.documentSplitterName().orElse(null),
-                definition.parser().orElse(null));
+                definition.parser().orElse(null),
+                definition.modality(),
+                definition.contentType().orElse(null));
     }
 
     /**
@@ -217,13 +219,21 @@ public class IngestRoutes extends RouteBuilder {
             IngestRunTimeConfig.PipelineRunTimeConfig runtime,
             EmbeddingStore<TextSegment> store, EmbeddingModel model,
             int maxSegmentSize, int maxOverlapSize, int embeddingBatchSize, int maxDocumentSize,
-            String documentSplitterName, String parser) {
+            String documentSplitterName, String parser, String modality, String contentType) {
 
         // the name is substituted into Kamelet URIs and registry references, so both declaration
         // styles are held to one charset; @Ingest names are already checked at build time
         if (!name.matches("[A-Za-z0-9._-]+")) {
             throw new IllegalStateException(
                     "Ingestion pipeline name '" + name + "' may only contain letters, digits, '.', '_' and '-'");
+        }
+        // the component validates modality and content type; that a media document is never
+        // parsed is a rule of this composition, where the parser action sits before the sink
+        boolean media = "media".equalsIgnoreCase(modality);
+        if (media && parser != null) {
+            throw new IllegalStateException("Ingestion pipeline '" + name
+                    + "' sets modality 'media' together with a parser. A media document is embedded whole and"
+                    + " never parsed; remove one of them.");
         }
         String storeRef = bindInstance(name, "store", store);
         String modelRef = bindInstance(name, "model", model);
@@ -238,11 +248,26 @@ public class IngestRoutes extends RouteBuilder {
         sink.put("maxSegmentSize", String.valueOf(maxSegmentSize));
         sink.put("maxOverlapSize", String.valueOf(maxOverlapSize));
         sink.put("embeddingBatchSize", String.valueOf(embeddingBatchSize));
+        sink.put("modality", modality);
+        if (contentType != null) {
+            sink.put("contentType", contentType);
+        }
         // 0, no limit, is the endpoint's default too
         sink.put("maxDocumentSize", String.valueOf(maxDocumentSize));
         sink.put("minDocumentSize", "0");
         if (documentSplitterName != null) {
             sink.put("documentSplitter", "#bean:" + documentSplitterName);
+        }
+        // filter.* comes from configuration for both declaration styles, the builder having no
+        // filter API, and the component enforces it
+        IngestRunTimeConfig.PipelineRunTimeConfig configured = runTimeConfig.pipelines().get(name);
+        if (configured != null) {
+            configured.filter().includeId().ifPresent(patterns -> sink.put("includeId", patterns));
+            configured.filter().excludeId().ifPresent(patterns -> sink.put("excludeId", patterns));
+            if (configured.filter().minDocumentSize() != 0) {
+                sink.put("minDocumentSize", String.valueOf(configured.filter().minDocumentSize()));
+            }
+            configured.filter().documentFilter().ifPresent(bean -> sink.put("documentFilter", "#bean:" + bean));
         }
         sink.put("embeddingStore", "#bean:" + storeRef);
         sink.put("embeddingModel", "#bean:" + modelRef);
@@ -261,9 +286,9 @@ public class IngestRoutes extends RouteBuilder {
             source.put("recursive", String.valueOf(runtime.source().recursive()));
             // the file consumer's own default poll delay
             source.put("delay", "500");
-            if (parser == null) {
-                // text is read as UTF-8; a parser receives the raw bytes instead - the format is
-                // its business, and a charset conversion would corrupt a binary document
+            if (parser == null && !media) {
+                // text is read as UTF-8; a parser or a media model receives the raw bytes instead -
+                // the format is its business, and a charset conversion would corrupt a binary document
                 source.put("charset", "UTF-8");
             }
             source.put("idempotentRepository", "#bean:" + repositoryRef);
@@ -275,7 +300,7 @@ public class IngestRoutes extends RouteBuilder {
                 route = route.setHeader(LangChain4jIngestHeaders.DOCUMENT_ID, documentIdExpression(documentId));
             }
             // no duplicate pre-check: the source register already filtered duplicates out
-            route = parseSteps(route, name, parser, maxDocumentSize, true, null);
+            route = parseSteps(route, name, parser, maxDocumentSize, null);
             // the file consumer discards the reply and the source register already keeps the
             // same file version from being ingested twice, so no repository goes to the sink.
             // The discarded reply would hide an empty outcome, so it is logged: warned with a
@@ -324,7 +349,7 @@ public class IngestRoutes extends RouteBuilder {
             IdempotentRepository register = repositoryRef == null
                     ? null
                     : getContext().getRegistry().lookupByNameAndType(repositoryRef, IdempotentRepository.class);
-            route = parseSteps(route, name, parser, maxDocumentSize, false, register);
+            route = parseSteps(route, name, parser, maxDocumentSize, register);
             if (repositoryRef != null) {
                 // deduplication by document id happens inside the sink's producer: a duplicate
                 // is answered SKIPPED, a blank delivery releases its claim
@@ -336,13 +361,13 @@ public class IngestRoutes extends RouteBuilder {
     }
 
     /**
-     * The optional parse stage: the id guard, the advisory duplicate check and the raw-size
-     * guard, then the parser action Kamelet, which captures the document id from the canonical
+     * The optional parse stage: the id guard and the advisory duplicate check, then the parser
+     * action Kamelet, which caps the raw payload and captures the document id from the canonical
      * header into the exchange property before the parse. The route is returned unchanged when
      * the pipeline has no parser.
      */
     private static ProcessorDefinition<?> parseSteps(ProcessorDefinition<?> route, String name, String parser,
-            int maxDocumentSize, boolean directory, IdempotentRepository register) {
+            int maxDocumentSize, IdempotentRepository register) {
         if (parser == null) {
             return route;
         }
@@ -370,57 +395,13 @@ public class IngestRoutes extends RouteBuilder {
                     .stop()
                     .end();
         }
-        if (maxDocumentSize > 0) {
-            // the endpoint's own cap counts extracted characters, which protects the splitter and
-            // the model but not the parse: this guard rejects the raw payload first, before tika
-            // or docling materialize it
-            route = route.process(rawSizeGuard(name, maxDocumentSize, directory, documentIdHeader));
-        }
         Map<String, Object> action = new LinkedHashMap<>();
         action.put("documentIdHeader", documentIdHeader);
+        // the sink's cap counts extracted characters, which protects the splitter and the model
+        // but not the parse: the action rejects the raw payload first, in bytes; 0, no limit, is
+        // the action's default too
+        action.put("maxDocumentSize", String.valueOf(maxDocumentSize));
         return route.to(kameletUri(name, Parser.valueOf(parser.toUpperCase(Locale.ROOT)).actionKamelet, "parser", action));
-    }
-
-    private static Processor rawSizeGuard(String name, int maxDocumentSize, boolean trustDeclaredLength,
-            String documentIdHeader) {
-        // the declared-length header spares even the read, but only the directory pipeline's own
-        // file consumer is trusted to have set it: on a consumer pipeline every header may be
-        // attacker-supplied along with the payload, so its body is always measured - a forged
-        // CamelFileLength must not talk an oversized payload past the guard and into the parser
-        return exchange -> {
-            Long declared = trustDeclaredLength
-                    ? exchange.getMessage().getHeader(Exchange.FILE_LENGTH, Long.class)
-                    : null;
-            long size;
-            byte[] bounded = null;
-            if (declared != null) {
-                size = declared;
-            } else {
-                // every body is measured through a stream - a GenericFile streams from disk, a
-                // byte[] merely wraps - so an attacker-sized payload is rejected after
-                // maxDocumentSize + 1 bytes instead of being materialized whole in the heap just
-                // to be measured; an accepted stream is consumed here, so the bytes replace it
-                // as the body. A null body carries no bytes to guard; it flows on and becomes
-                // the EMPTY outcome
-                InputStream stream = exchange.getMessage().getBody(InputStream.class);
-                if (stream == null) {
-                    size = 0;
-                } else {
-                    int limit = maxDocumentSize == Integer.MAX_VALUE ? Integer.MAX_VALUE : maxDocumentSize + 1;
-                    bounded = stream.readNBytes(limit);
-                    size = bounded.length;
-                }
-            }
-            if (size > maxDocumentSize) {
-                throw new IllegalArgumentException(
-                        "Ingestion pipeline '" + name + "': document '"
-                                + exchange.getMessage().getHeader(documentIdHeader, String.class)
-                                + "' exceeds maxDocumentSize (" + size + " > " + maxDocumentSize + " bytes)");
-            }
-            if (bounded != null) {
-                exchange.getMessage().setBody(bounded);
-            }
-        };
     }
 
     /**
