@@ -16,8 +16,14 @@
  */
 package org.apache.camel.quarkus.component.langchain4j.ingest.deployment;
 
+import dev.langchain4j.data.segment.TextSegment;
+import dev.langchain4j.store.embedding.EmbeddingStore;
+import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 import io.quarkus.test.QuarkusExtensionTest;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import org.apache.camel.quarkus.component.langchain4j.ingest.Ingest;
 import org.apache.camel.quarkus.component.langchain4j.ingest.IngestPipeline;
 import org.apache.camel.quarkus.component.langchain4j.ingest.Source;
@@ -26,30 +32,40 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /**
- * A pipeline name is substituted into Kamelet URIs and registry references, so a Java-declared
- * one is held to the same charset as a configured one - checked at build time, where it is known.
+ * With two store beans, a Java-declared pipeline must name one. The message points at the
+ * builder method: the configuration key would be rejected at build time for this name.
  */
-class IngestBuilderInvalidNameTest {
+class IngestBuilderAmbiguousStoreTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
-            .withApplicationRoot(jar -> jar.addClasses(Pipelines.class))
+            .withApplicationRoot(jar -> jar.addClasses(TestEmbeddingBeans.class, OtherStore.class, Pipelines.class))
             .assertException(t -> ValidationTestSupport.assertFailure(t,
-                    "has pipeline name 'docs/en', which may only contain letters, digits"));
+                    "Ingestion pipeline 'docs' found 2 embedding store beans",
+                    "Name the one to use with IngestPipeline.embeddingStore(...) in its @Ingest method"));
 
     @Test
-    void buildMustFail() {
-        Assertions.fail("The build was expected to fail");
+    void startMustFail() {
+        Assertions.fail("The application start was expected to fail");
+    }
+
+    @ApplicationScoped
+    public static class OtherStore {
+
+        @Produces
+        @Singleton
+        @Named("other-store")
+        EmbeddingStore<TextSegment> store() {
+            return new InMemoryEmbeddingStore<>();
+        }
     }
 
     @ApplicationScoped
     public static class Pipelines {
 
-        @Ingest("docs/en")
+        @Ingest("docs")
         IngestPipeline docs() {
-            return IngestPipeline.from(Source.file("target/invalid-name"))
-                    .embeddingStore("store")
-                    .embeddingModel("model");
+            return IngestPipeline.from(Source.file("target/ambiguous-store")).embeddingModel("model");
         }
     }
 }

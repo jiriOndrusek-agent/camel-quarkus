@@ -53,7 +53,7 @@ import org.jboss.logging.Logger;
 /**
  * Translates the extension's configuration model — build-time and runtime properties and
  * {@code @Ingest} builder methods — into one route per pipeline, composed from the catalog's
- * langchain4j-ingest Kamelets, whose engine
+ * langchain4j-ingest Kamelets, each adding a route named after the pipeline. Their engine
  * lives in the {@code camel-langchain4j-ingest} component. What stays here is the Quarkus DX:
  * CDI bean resolution with its actionable messages, and the configuration-level validations.
  */
@@ -184,8 +184,8 @@ public class IngestRoutes extends RouteBuilder {
             int maxSegmentSize, int maxOverlapSize, int embeddingBatchSize, int maxDocumentSize,
             String documentSplitterName, String parser) {
 
-        // the name is substituted into the sink Kamelet's endpoint URI and into registry
-        // references, so both declaration styles are held to one charset
+        // the name is substituted into Kamelet URIs and registry references, so both declaration
+        // styles are held to one charset; @Ingest names are already checked at build time
         if (!name.matches("[A-Za-z0-9._-]+")) {
             throw new IllegalStateException(
                     "Ingestion pipeline name '" + name + "' may only contain letters, digits, '.', '_' and '-'");
@@ -228,20 +228,20 @@ public class IngestRoutes extends RouteBuilder {
             }
             source.put("idempotentRepository", "#bean:" + repositoryRef);
 
-            ProcessorDefinition<?> route = from(kameletUri("langchain4j-ingest-file-source", source))
+            ProcessorDefinition<?> route = from(kameletUri(name, "langchain4j-ingest-file-source", "source", source))
                     .routeId("langchain4j-ingest-" + name);
             if (documentId != null) {
                 // override the source's file-name default; captured before any further step
                 route = route.setHeader(LangChain4jIngestHeaders.DOCUMENT_ID, documentIdExpression(documentId));
             }
             // no duplicate pre-check: the source register already filtered duplicates out
-            route = parseSteps(route, name, parser, maxDocumentSize, true, LangChain4jIngestHeaders.DOCUMENT_ID, null);
+            route = parseSteps(route, name, parser, maxDocumentSize, true, null);
             // the file consumer discards the reply and the source register already keeps the
             // same file version from being ingested twice, so no repository goes to the sink.
             // The discarded reply would hide an empty outcome, so it is logged: warned with a
             // parser, since a parse to nothing typically means a missing Tika parser module or an
             // image-only document, and the file's register key is committed
-            route.to(kameletUri("langchain4j-ingest-sink", sink)).process(exchange -> {
+            route.to(kameletUri(name, "langchain4j-ingest-sink", "sink", sink)).process(exchange -> {
                 IngestResult result = exchange.getMessage().getBody(IngestResult.class);
                 if (result == null || result.outcome() != IngestResult.Outcome.EMPTY) {
                     return;
@@ -262,53 +262,42 @@ public class IngestRoutes extends RouteBuilder {
                         "Ingestion pipeline '" + name + "': '" + uri + "' is not a consumer URI");
             }
             ProcessorDefinition<?> route = from(uri).routeId("langchain4j-ingest-" + name);
-            String documentIdHeader;
-            if (documentId != null && isSimpleExpression(documentId)) {
-                // evaluated against the exchange the consumer delivered, before any parse
+            if (documentId != null) {
+                // copied into the canonical header the actions and the sink read, as on a directory
+                // pipeline: evaluated against the exchange the consumer delivered, before any parse,
+                // and a plain header name is read directly, never substituted into an expression
                 route = route.setHeader(LangChain4jIngestHeaders.DOCUMENT_ID, documentIdExpression(documentId));
-                documentIdHeader = LangChain4jIngestHeaders.DOCUMENT_ID;
             } else {
-                // a plain header name goes to the actions and the endpoint as-is; unset keeps
-                // the component's canonical default (the 3.40 rename, #9162)
-                documentIdHeader = documentId != null ? documentId : IngestHeaders.DOCUMENT_ID;
-                // the actions substitute the name into a simple expression, so it is held to a
-                // charset that cannot break out of it; anything else is a simple expression
-                if (!documentIdHeader.matches("[A-Za-z0-9._-]+")) {
-                    throw new IllegalStateException("Ingestion pipeline '" + name + "': source.document-id '"
-                            + documentIdHeader + "' is not a plain header name - it may only contain letters,"
-                            + " digits, '.', '_' and '-'; write anything else as a $simple{...} expression");
-                }
-            }
-            if (IngestHeaders.DOCUMENT_ID.equals(documentIdHeader)) {
-                // the 3.39 name is still read as a fallback: normalised into the canonical
-                // header before the actions and the sink, warned once per pipeline
+                // unset keeps the component's canonical header (the 3.40 rename, #9162); the 3.39
+                // name is still read as a fallback, warned once per pipeline
                 route = route.process(legacyDocumentIdFallback(name));
             }
-            sink.put("documentIdHeader", documentIdHeader);
             IdempotentRepository register = repositoryRef == null
                     ? null
                     : getContext().getRegistry().lookupByNameAndType(repositoryRef, IdempotentRepository.class);
-            route = parseSteps(route, name, parser, maxDocumentSize, false, documentIdHeader, register);
+            route = parseSteps(route, name, parser, maxDocumentSize, false, register);
             if (repositoryRef != null) {
                 // deduplication by document id happens inside the sink's producer: a duplicate
                 // is answered SKIPPED, a blank delivery releases its claim
                 sink.put("idempotentRepository", "#bean:" + repositoryRef);
             }
-            route.to(kameletUri("langchain4j-ingest-sink", sink));
+            route.to(kameletUri(name, "langchain4j-ingest-sink", "sink", sink));
             LOG.infof("Ingestion pipeline '%s': source=%s", name, URISupport.sanitizeUri(uri));
         }
     }
 
     /**
      * The optional parse stage: the id guard, the advisory duplicate check and the raw-size
-     * guard, then the parser action Kamelet, which captures the document id into the exchange
-     * property before the parse. The route is returned unchanged when the pipeline has no parser.
+     * guard, then the parser action Kamelet, which captures the document id from the canonical
+     * header into the exchange property before the parse. The route is returned unchanged when
+     * the pipeline has no parser.
      */
     private static ProcessorDefinition<?> parseSteps(ProcessorDefinition<?> route, String name, String parser,
-            int maxDocumentSize, boolean directory, String documentIdHeader, IdempotentRepository register) {
+            int maxDocumentSize, boolean directory, IdempotentRepository register) {
         if (parser == null) {
             return route;
         }
+        String documentIdHeader = LangChain4jIngestHeaders.DOCUMENT_ID;
         // a parser must never run without a captured id: the header the action reads would be
         // absent, and headers written by a parsed document could take its place - the previous
         // engine failed such a delivery, and so does this guard
@@ -340,7 +329,7 @@ public class IngestRoutes extends RouteBuilder {
         }
         Map<String, Object> action = new LinkedHashMap<>();
         action.put("documentIdHeader", documentIdHeader);
-        return route.to(kameletUri(Parser.valueOf(parser.toUpperCase(Locale.ROOT)).actionKamelet, action));
+        return route.to(kameletUri(name, Parser.valueOf(parser.toUpperCase(Locale.ROOT)).actionKamelet, "parser", action));
     }
 
     private static Processor rawSizeGuard(String name, int maxDocumentSize, boolean trustDeclaredLength,
@@ -390,23 +379,24 @@ public class IngestRoutes extends RouteBuilder {
      * Every value travels as a {@code RAW(...)} token: {@code createQueryString} leaves those unencoded and the
      * Kamelet's own URI parsing unwraps them, so a {@code #bean:} prefix, an Ant pattern's slashes and commas, or
      * a directory path arrive at the template verbatim — percent-encoded they would survive the substitution
-     * literally.
+     * literally. The route the Kamelet adds is named {@code langchain4j-ingest-<name>-<step>} rather than generated.
      */
-    private static String kameletUri(String kamelet, Map<String, Object> properties) {
+    private static String kameletUri(String name, String kamelet, String step, Map<String, Object> properties) {
         Map<String, Object> raw = new LinkedHashMap<>();
-        properties.forEach((key, value) -> raw.put(key, raw(String.valueOf(value))));
-        return "kamelet:" + kamelet + "?" + URISupport.createQueryString(raw);
+        properties.forEach((key, value) -> raw.put(key, raw(name, String.valueOf(value))));
+        return "kamelet:" + kamelet + "/langchain4j-ingest-" + name + "-" + step + "?"
+                + URISupport.createQueryString(raw);
     }
 
-    private static String raw(String value) {
+    private static String raw(String name, String value) {
         if (!value.contains(")")) {
             return "RAW(" + value + ")";
         }
         if (!value.contains("}")) {
             return "RAW{" + value + "}";
         }
-        throw new IllegalStateException(
-                "A Kamelet property value containing both ')' and '}' cannot be passed: " + value);
+        throw new IllegalStateException("Ingestion pipeline '" + name
+                + "': a Kamelet property value containing both ')' and '}' cannot be passed: " + value);
     }
 
     private static boolean isSimpleExpression(String value) {

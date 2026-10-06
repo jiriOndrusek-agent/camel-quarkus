@@ -62,6 +62,10 @@ public class IngestResource {
     EmbeddingStore<TextSegment> htmlfeedStore;
 
     @Inject
+    @Named("dottedfeed-store")
+    EmbeddingStore<TextSegment> dottedfeedStore;
+
+    @Inject
     @Named("datasheets-store")
     EmbeddingStore<TextSegment> datasheetsStore;
 
@@ -149,6 +153,7 @@ public class IngestResource {
         EmbeddingStore<TextSegment> store = switch (storeName == null ? "products" : storeName) {
         case "custom" -> customStore;
         case "htmlfeed" -> htmlfeedStore;
+        case "dottedfeed" -> dottedfeedStore;
         case "datasheets" -> datasheetsStore;
         case "s3" -> s3Store;
         case "events" -> eventsStore;
@@ -178,17 +183,20 @@ public class IngestResource {
     public record SearchHit(String text, String pipeline, String documentId) {
     }
 
-    /** Feeds a pipeline synchronously; the reply carries the outcome, so tests can assert skipped and failures. */
+    /**
+     * Feeds a pipeline synchronously; the reply carries the outcome, so tests can assert skipped and failures.
+     * The id travels in the {@code header} query parameter's header, the canonical one by default.
+     */
     @POST
     @jakarta.ws.rs.Path("/feed/{pipeline}/{documentId:.+}")
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.TEXT_PLAIN)
     public String feed(@PathParam("pipeline") String pipeline, @PathParam("documentId") String documentId,
-            String content) {
+            @QueryParam("header") String header, String content) {
         // every consumer-fed test pipeline reads direct:<pipeline>-feed
         String uri = "direct:" + pipeline + "-feed";
-        IngestResult result = producerTemplate.requestBodyAndHeader(uri, content, IngestHeaders.DOCUMENT_ID,
-                documentId, IngestResult.class);
+        IngestResult result = producerTemplate.requestBodyAndHeader(uri, content,
+                header == null ? IngestHeaders.DOCUMENT_ID : header, documentId, IngestResult.class);
         return result.outcome().label();
     }
 

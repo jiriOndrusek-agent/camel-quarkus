@@ -182,8 +182,8 @@ class Langchain4jIngestProcessor {
     }
 
     /**
-     * Discovers {@code @Ingest} builder methods: validated here (return type, no parameters,
-     * unique names, no collision with configuration-declared pipelines), invoked reflectively once
+     * Discovers {@code @Ingest} builder methods: validated here (name charset, return type, no
+     * parameters, unique names, no collision with configuration-declared pipelines), invoked reflectively once
      * at startup. Violations are reported as {@link ValidationErrorBuildItem}s — the channel every
      * build-time check of this extension uses, so dev and test mode see them too, and all of them
      * at once.
@@ -217,6 +217,14 @@ class Langchain4jIngestProcessor {
             if (name.isBlank()) {
                 validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
                         "@Ingest on " + location + " has a blank pipeline name")));
+                continue;
+            }
+            // the charset IngestRoutes holds configured names to at startup: the name ends up in
+            // Kamelet URIs and registry references, and an @Ingest name is known already here
+            if (!name.matches("[A-Za-z0-9._-]+")) {
+                validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
+                        "@Ingest on " + location + " has pipeline name '" + name
+                                + "', which may only contain letters, digits, '.', '_' and '-'")));
                 continue;
             }
             if (!method.returnType().name().equals(pipelineType)) {
