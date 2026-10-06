@@ -38,6 +38,7 @@ import io.quarkus.deployment.builditem.ApplicationArchivesBuildItem;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ExcludeConfigBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceDirectoryBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
@@ -76,6 +77,19 @@ class Langchain4jIngestProcessor {
                 .addBeanClasses(IngestRoutes.class)
                 .setUnremovable()
                 .build();
+    }
+
+    /**
+     * The composition resolves its catalog Kamelets at runtime, so a native image needs their
+     * YAML whatever {@code quarkus.camel.kamelet.identifiers} narrows the kamelet extension to.
+     */
+    @BuildStep
+    NativeImageResourceBuildItem ingestKamelets() {
+        return new NativeImageResourceBuildItem(
+                "kamelets/langchain4j-ingest-file-source.kamelet.yaml",
+                "kamelets/langchain4j-ingest-sink.kamelet.yaml",
+                "kamelets/tika-extract-text-action.kamelet.yaml",
+                "kamelets/docling-convert-action.kamelet.yaml");
     }
 
     /**
