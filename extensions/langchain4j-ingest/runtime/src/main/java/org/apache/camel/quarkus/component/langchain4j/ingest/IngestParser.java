@@ -26,7 +26,7 @@ import java.util.stream.Stream;
  * knows the action Kamelet performing the parse, so adding a parser here is the whole wiring —
  * there is no switch to keep in step.
  */
-public enum IngestParser {
+enum IngestParser {
 
     TIKA("tika-extract-text-action"),
     DOCLING("docling-convert-action");
@@ -38,7 +38,7 @@ public enum IngestParser {
     }
 
     /** The configuration value — and, by design, the name of the Camel component the parser needs. */
-    public String label() {
+    String label() {
         return name().toLowerCase(Locale.ROOT);
     }
 
@@ -48,7 +48,7 @@ public enum IngestParser {
     }
 
     /** The labels, for validation messages and the builder's {@code SUPPORTED_PARSERS} view. */
-    public static Set<String> labels() {
+    static Set<String> labels() {
         return Stream.of(values()).map(IngestParser::label).collect(Collectors.toUnmodifiableSet());
     }
 

@@ -153,6 +153,10 @@ public final class IngestPipeline {
         return this;
     }
 
+    Source source() {
+        return source;
+    }
+
     String sourceType() {
         return source.type();
     }
@@ -199,50 +203,5 @@ public final class IngestPipeline {
 
     Optional<String> documentSplitterName() {
         return Optional.ofNullable(documentSplitterName);
-    }
-
-    /** The configuration view, so a builder pipeline reuses every configuration path verbatim. */
-    IngestRunTimeConfig.PipelineRunTimeConfig asRunTimeConfig() {
-        IngestRunTimeConfig.PipelineRunTimeConfig.SourceRunTimeConfig sourceConfig = source.asRunTimeConfig();
-        return new IngestRunTimeConfig.PipelineRunTimeConfig() {
-
-            @Override
-            public boolean enabled() {
-                return true;
-            }
-
-            @Override
-            public SourceRunTimeConfig source() {
-                return sourceConfig;
-            }
-
-            @Override
-            public FilterRunTimeConfig filter() {
-                // the builder exposes no filter API; IngestRoutes overlays configuration-supplied
-                // filters over this empty default
-                return new FilterRunTimeConfig() {
-
-                    @Override
-                    public Optional<String> includeId() {
-                        return Optional.empty();
-                    }
-
-                    @Override
-                    public Optional<String> excludeId() {
-                        return Optional.empty();
-                    }
-
-                    @Override
-                    public int minDocumentSize() {
-                        return 0;
-                    }
-
-                    @Override
-                    public Optional<String> documentFilter() {
-                        return Optional.empty();
-                    }
-                };
-            }
-        };
     }
 }

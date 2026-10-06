@@ -16,7 +16,6 @@
  */
 package org.apache.camel.quarkus.component.langchain4j.ingest;
 
-import java.util.Optional;
 import java.util.function.Function;
 
 import org.apache.camel.builder.EndpointConsumerBuilder;
@@ -139,34 +138,23 @@ public final class Source {
         return uri;
     }
 
-    /** The configuration view, so builder pipelines reuse every configuration path verbatim. */
-    IngestRunTimeConfig.PipelineRunTimeConfig.SourceRunTimeConfig asRunTimeConfig() {
-        return new IngestRunTimeConfig.PipelineRunTimeConfig.SourceRunTimeConfig() {
+    String directory() {
+        return directory;
+    }
 
-            @Override
-            public Optional<String> directory() {
-                return Optional.ofNullable(directory);
-            }
+    boolean isRecursive() {
+        return recursive;
+    }
 
-            @Override
-            public boolean recursive() {
-                return recursive;
-            }
+    String documentId() {
+        return documentId;
+    }
 
-            @Override
-            public Optional<String> documentId() {
-                return Optional.ofNullable(documentId);
-            }
+    String idempotentRepository() {
+        return idempotentRepository;
+    }
 
-            @Override
-            public Optional<String> idempotentRepository() {
-                return Optional.ofNullable(idempotentRepository);
-            }
-
-            @Override
-            public boolean idempotentRepositoryAutoCreate() {
-                return idempotentRepositoryAutoCreate;
-            }
-        };
+    boolean isIdempotentRepositoryAutoCreate() {
+        return idempotentRepositoryAutoCreate;
     }
 }

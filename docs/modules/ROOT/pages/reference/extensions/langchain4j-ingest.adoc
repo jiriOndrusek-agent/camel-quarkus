@@ -245,7 +245,6 @@ quarkus.camel.langchain4j.ingest.s3docs.embedding-store=products
 
 Each pipeline is one route composed from the catalog's `langchain4j-ingest-file-source`, parser action and `langchain4j-ingest-sink` Kamelets; the engine is the `camel-langchain4j-ingest` component.
 They resolve through the regular Kamelet machinery, so overriding `camel.component.kamelet.location` without keeping `classpath:kamelets`, or shipping an equally named Kamelet, replaces internal steps — including the identity capture — and is advanced surgery.
-Startup verifies the needed Kamelets resolve and fails with an actionable error otherwise.
 
 [id="extensions-langchain4j-ingest-usage-when-ingestion-fails"]
 === When ingestion fails
