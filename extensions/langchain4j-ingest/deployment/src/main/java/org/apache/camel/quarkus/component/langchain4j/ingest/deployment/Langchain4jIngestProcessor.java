@@ -310,6 +310,36 @@ class Langchain4jIngestProcessor {
                         "Ingestion pipeline '" + entry.getKey() + "': max-document-size must not be negative, 0 "
                                 + "meaning no limit (got " + pipeline.maxDocumentSize() + ")")));
             }
+
+            // the component and IngestRoutes check these at startup; a configured pipeline fails the build instead
+            boolean media = "media".equalsIgnoreCase(pipeline.modality());
+            if (!media && !"text".equalsIgnoreCase(pipeline.modality())) {
+                validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
+                        "Ingestion pipeline '" + entry.getKey() + "': modality must be 'text' or 'media' (got '"
+                                + pipeline.modality() + "')")));
+            }
+            if (media && pipeline.parser().isPresent()) {
+                validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
+                        "Ingestion pipeline '" + entry.getKey() + "' sets modality 'media' together with a parser. A "
+                                + "media document is embedded whole and never parsed; remove one of them.")));
+            }
+            if (media && pipeline.documentSplitter().isPresent()) {
+                validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
+                        "Ingestion pipeline '" + entry.getKey() + "' sets modality 'media' together with a "
+                                + "document-splitter. A media document is embedded whole and never split; remove one "
+                                + "of them.")));
+            }
+            if (!media && pipeline.contentType().isPresent()) {
+                validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
+                        "Ingestion pipeline '" + entry.getKey() + "': content-type only applies to modality 'media' "
+                                + "(got '" + pipeline.contentType().get() + "'). Set modality=media, or remove it.")));
+            }
+            // the component drops the parameters after ';', so a value with nothing before them would silently be unset
+            if (pipeline.contentType().isPresent() && pipeline.contentType().get().split(";", 2)[0].isBlank()) {
+                validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
+                        "Ingestion pipeline '" + entry.getKey() + "': content-type must not be blank or only parameters "
+                                + "(got '" + pipeline.contentType().get() + "')")));
+            }
         }
     }
 }
