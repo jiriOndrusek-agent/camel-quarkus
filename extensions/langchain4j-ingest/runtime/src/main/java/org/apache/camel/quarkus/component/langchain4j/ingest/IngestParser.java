@@ -47,7 +47,7 @@ enum IngestParser {
         return actionKamelet;
     }
 
-    /** The labels, for validation messages and the builder's {@code SUPPORTED_PARSERS} view. */
+    /** The labels, for validation messages and the {@code SUPPORTED_PARSERS} view. */
     static Set<String> labels() {
         return Stream.of(values()).map(IngestParser::label).collect(Collectors.toUnmodifiableSet());
     }

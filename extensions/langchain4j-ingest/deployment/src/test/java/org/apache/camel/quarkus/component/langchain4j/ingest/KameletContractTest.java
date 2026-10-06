@@ -72,7 +72,7 @@ class KameletContractTest {
 
     /** Every optional value set, so every conditional parameter is forwarded. */
     private static PipelineSpec spec(String directory, String uri, IngestParser parser, boolean media) {
-        return new PipelineSpec("contract", false, directory, uri, true, uri == null ? null : "CamelKafkaKey",
+        return new PipelineSpec("contract", directory, uri, true, uri == null ? null : "CamelKafkaKey",
                 "register", false, parser, media, media ? "audio/wav" : null, 500, 50, 32, 1000,
                 media ? null : "splitter", "store", "model",
                 new PipelineSpec.Filters("**/*.md", "**/draft-*", 10, "documentFilter"));

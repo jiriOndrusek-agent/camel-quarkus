@@ -67,22 +67,22 @@ final class IngestCompositionSupport {
         return action;
     }
 
-    /** The sink Kamelet's parameters. */
+    /**
+     * The sink Kamelet's parameters: whatever is set is forwarded, and the component checks the
+     * bounds and the media conflicts - it ignores what a modality does not use and rejects what
+     * contradicts it.
+     */
     static Map<String, Object> sinkParameters(PipelineSpec spec) {
         Map<String, Object> sink = new LinkedHashMap<>();
         sink.put("pipelineName", spec.name());
         if (spec.media()) {
-            // embedded whole, as one vector: the splitter options do not apply
             sink.put("modality", "media");
-            if (spec.contentType() != null) {
-                sink.put("contentType", spec.contentType());
-            }
-        } else {
-            sink.put("maxSegmentSize", String.valueOf(spec.maxSegmentSize()));
-            sink.put("maxOverlapSize", String.valueOf(spec.maxOverlapSize()));
-            sink.put("embeddingBatchSize", String.valueOf(spec.embeddingBatchSize()));
         }
-        if (spec.maxDocumentSize() > 0) {
+        putIfSet(sink, "contentType", spec.contentType());
+        putIfSet(sink, "maxSegmentSize", spec.maxSegmentSize());
+        putIfSet(sink, "maxOverlapSize", spec.maxOverlapSize());
+        putIfSet(sink, "embeddingBatchSize", spec.embeddingBatchSize());
+        if (spec.maxDocumentSize() != 0) {
             sink.put("maxDocumentSize", String.valueOf(spec.maxDocumentSize()));
         }
         if (spec.documentSplitter() != null) {
@@ -91,13 +91,9 @@ final class IngestCompositionSupport {
         // enforced by the component: id patterns act before the dedup claim, the size floor and the
         // predicate answer FILTERED and release theirs
         PipelineSpec.Filters filters = spec.filters();
-        if (filters.includeId() != null) {
-            sink.put("includeId", filters.includeId());
-        }
-        if (filters.excludeId() != null) {
-            sink.put("excludeId", filters.excludeId());
-        }
-        if (filters.minDocumentSize() > 0) {
+        putIfSet(sink, "includeId", filters.includeId());
+        putIfSet(sink, "excludeId", filters.excludeId());
+        if (filters.minDocumentSize() != 0) {
             sink.put("minDocumentSize", String.valueOf(filters.minDocumentSize()));
         }
         if (filters.documentFilter() != null) {
@@ -117,6 +113,12 @@ final class IngestCompositionSupport {
             }
         }
         return sink;
+    }
+
+    private static void putIfSet(Map<String, Object> parameters, String key, Object value) {
+        if (value != null) {
+            parameters.put(key, String.valueOf(value));
+        }
     }
 
     /**

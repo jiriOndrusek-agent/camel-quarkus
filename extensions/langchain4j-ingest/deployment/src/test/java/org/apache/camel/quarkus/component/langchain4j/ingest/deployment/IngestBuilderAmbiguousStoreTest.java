@@ -32,8 +32,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /**
- * With two store beans, a Java-declared pipeline must name one. The message points at the
- * builder method: the configuration key would be rejected at build time for this name.
+ * With two store beans, a Java-declared pipeline must name one, and the message names the
+ * configuration key: it applies to {@code @Ingest} pipelines as to configured ones.
  */
 class IngestBuilderAmbiguousStoreTest {
 
@@ -42,7 +42,7 @@ class IngestBuilderAmbiguousStoreTest {
             .withApplicationRoot(jar -> jar.addClasses(TestEmbeddingBeans.class, OtherStore.class, Pipelines.class))
             .assertException(t -> ValidationTestSupport.assertFailure(t,
                     "Ingestion pipeline 'docs' found 2 embedding store beans",
-                    "IngestPipeline.embeddingStore(\"<bean name>\") in its @Ingest method"));
+                    "Name the one to use with quarkus.camel.langchain4j.ingest.docs.embedding-store"));
 
     @Test
     void startMustFail() {
@@ -65,7 +65,7 @@ class IngestBuilderAmbiguousStoreTest {
 
         @Ingest("docs")
         IngestPipeline docs() {
-            return IngestPipeline.from(Source.file("target/ambiguous-store")).embeddingModel("model");
+            return IngestPipeline.from(Source.file("target/ambiguous-store"));
         }
     }
 }

@@ -16,25 +16,45 @@
  */
 package org.apache.camel.quarkus.component.langchain4j.ingest.deployment;
 
+import dev.langchain4j.data.document.DocumentSplitter;
+import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import io.quarkus.test.QuarkusExtensionTest;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-/** A media pipeline embeds a document whole, so a document splitter beside it stops the build. */
+/**
+ * A media pipeline embeds a document whole, so the component rejects a document splitter beside it
+ * at startup.
+ */
 class IngestModalitySplitterConflictTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
-            .withApplicationRoot(jar -> {
-            })
-            .overrideConfigKey("quarkus.camel.langchain4j.ingest.music.modality", "media")
-            .overrideConfigKey("quarkus.camel.langchain4j.ingest.music.document-splitter", "mySplitter")
+            .withApplicationRoot(jar -> jar.addClasses(TestEmbeddingBeans.class, Splitters.class))
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.source.directory", "target/media-splitter")
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.modality", "media")
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.document-splitter", "mySplitter")
             .assertException(t -> ValidationTestSupport.assertFailure(t,
-                    "sets modality 'media'", "document-splitter 'mySplitter'", "embedded whole"));
+                    "Ingestion pipeline 'docs': documentSplitter does not apply to modality=media"));
 
     @Test
-    void buildMustFail() {
-        Assertions.fail("The build was expected to fail");
+    void startMustFail() {
+        Assertions.fail("The application start was expected to fail");
+    }
+
+    @ApplicationScoped
+    public static class Splitters {
+
+        @Produces
+        @Singleton
+        @Named("mySplitter")
+        DocumentSplitter splitter() {
+            return DocumentSplitters.recursive(100, 10);
+        }
     }
 }

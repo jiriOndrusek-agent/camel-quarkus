@@ -58,19 +58,9 @@ final class IngestComponentPresence {
 
         // the enabled @Ingest pipelines only, already resolved - the route builder reuses them
         javaPipelines.forEach((name, definition) -> {
-            if ("endpoint".equals(definition.sourceType())) {
-                require(context, name, definition.sourceUri());
-            }
-            // a builder-declared parser is out of reach of the build-time check, like the URI;
-            // resolved without starting the component - the route builder starts it later. No
-            // catch on purpose: a component that resolves but fails to initialise surfaces its
-            // real error, only an unresolvable one earns the artifact hint below
-            String parser = definition.parser().orElse(null);
-            if (parser != null && context.getComponent(parser, true, false) == null) {
-                throw new IllegalStateException("Ingestion pipeline '" + name + "' parses with '" + parser
-                        + "', but the Camel component '" + parser + "' is not on the classpath. "
-                        + "Add the extension that provides it, e.g. org.apache.camel.quarkus:camel-quarkus-"
-                        + parser);
+            String uri = definition.source().uri();
+            if (uri != null) {
+                require(context, name, uri);
             }
         });
     }

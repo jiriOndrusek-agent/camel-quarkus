@@ -32,7 +32,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 /**
  * An {@code @Ingest} method is a CDI producer method: its class needs no bean-defining annotation,
  * its parameters are injection points, it runs once although the pre-start check and the route
- * builder both read the pipeline, and a pipeline switched off never runs.
+ * builder both read the pipeline, and a pipeline switched off never runs. Configuration supplies
+ * every other property, as for a configured pipeline.
  */
 class IngestProducerMethodTest {
 
@@ -40,6 +41,8 @@ class IngestProducerMethodTest {
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
             .withApplicationRoot(jar -> jar.addClasses(TestEmbeddingBeans.class, Pipelines.class))
             .overrideConfigKey("producer.test.directory", "target/producer-docs")
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.embedding-store", "store")
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.embedding-model", "model")
             .overrideConfigKey("quarkus.camel.langchain4j.ingest.off.enabled", "false");
 
     @Inject
@@ -60,9 +63,7 @@ class IngestProducerMethodTest {
         @Ingest("docs")
         IngestPipeline docs(@ConfigProperty(name = "producer.test.directory") String directory) {
             CALLS.incrementAndGet();
-            return IngestPipeline.from(Source.file(directory))
-                    .embeddingStore("store")
-                    .embeddingModel("model");
+            return IngestPipeline.from(Source.file(directory));
         }
 
         @Ingest("off")

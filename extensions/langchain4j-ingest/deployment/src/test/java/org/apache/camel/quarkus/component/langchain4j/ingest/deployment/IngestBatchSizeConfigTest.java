@@ -21,19 +21,19 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-/** The embedding batch size is validated at build time on the configuration path. */
+/** The embedding batch size is forwarded to the component, which rejects a non-positive one at startup. */
 class IngestBatchSizeConfigTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
-            .withApplicationRoot(jar -> {
-            })
+            .withApplicationRoot(jar -> jar.addClasses(TestEmbeddingBeans.class))
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.source.directory", "target/batch-size")
             .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.embedding-batch-size", "0")
             .assertException(t -> ValidationTestSupport.assertFailure(t,
-                    "embedding-batch-size must be positive"));
+                    "Ingestion pipeline 'docs': embeddingBatchSize must be positive (got 0)"));
 
     @Test
-    void buildMustFail() {
-        Assertions.fail("The build was expected to fail");
+    void startMustFail() {
+        Assertions.fail("The application start was expected to fail");
     }
 }

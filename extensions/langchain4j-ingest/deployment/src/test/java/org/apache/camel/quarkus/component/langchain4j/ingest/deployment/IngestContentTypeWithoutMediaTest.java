@@ -21,19 +21,19 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-/** A content type types a media payload, so one set without modality media stops the build. */
+/** A content type types a media payload: the component rejects one set without modality media at startup. */
 class IngestContentTypeWithoutMediaTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
-            .withApplicationRoot(jar -> {
-            })
-            .overrideConfigKey("quarkus.camel.langchain4j.ingest.photos.content-type", "image/png")
+            .withApplicationRoot(jar -> jar.addClasses(TestEmbeddingBeans.class))
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.source.directory", "target/content-type")
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.content-type", "image/png")
             .assertException(t -> ValidationTestSupport.assertFailure(t,
-                    "sets content-type 'image/png'", "without modality 'media'"));
+                    "Ingestion pipeline 'docs': contentType only applies to modality=media (got 'image/png')"));
 
     @Test
-    void buildMustFail() {
-        Assertions.fail("The build was expected to fail");
+    void startMustFail() {
+        Assertions.fail("The application start was expected to fail");
     }
 }

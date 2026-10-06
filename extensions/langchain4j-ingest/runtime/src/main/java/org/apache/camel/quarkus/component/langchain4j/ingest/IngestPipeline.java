@@ -16,32 +16,23 @@
  */
 package org.apache.camel.quarkus.component.langchain4j.ingest;
 
-import java.util.Optional;
 import java.util.Set;
 
 /**
- * A pipeline declared in Java rather than in configuration, returned from an {@link Ingest}
- * method. Every property has a configuration twin, and both paths share the same runtime.
+ * A pipeline declared in Java, returned from an {@link Ingest} method: its {@link Source}. Every
+ * other property is configuration, {@code quarkus.camel.langchain4j.ingest.<name>.*}, as for a
+ * pipeline declared there.
  */
 public final class IngestPipeline {
 
-    /** The values {@link #parser(String)} and the {@code parser} configuration property accept. */
+    /** The values the {@code parser} configuration property accepts. */
     public static final Set<String> SUPPORTED_PARSERS = IngestParser.labels();
-
-    /** The values {@link #modality(String)} and the {@code modality} configuration property accept. */
-    public static final Set<String> SUPPORTED_MODALITIES = Set.of("text", "media");
 
     private final Source source;
     private String embeddingStoreName;
     private String embeddingModelName;
-    private String parser;
-    private String modality;
-    private String contentType;
-    private int maxSegmentSize = IngestBuildTimeConfig.DEFAULT_MAX_SEGMENT_SIZE;
-    private int maxOverlapSize = IngestBuildTimeConfig.DEFAULT_MAX_OVERLAP_SIZE;
-    private int embeddingBatchSize = IngestBuildTimeConfig.DEFAULT_EMBEDDING_BATCH_SIZE;
-    private int maxDocumentSize = IngestBuildTimeConfig.DEFAULT_MAX_DOCUMENT_SIZE;
-    private String documentSplitterName;
+    private Integer maxSegmentSize;
+    private Integer maxOverlapSize;
 
     private IngestPipeline(Source source) {
         this.source = source;
@@ -51,36 +42,32 @@ public final class IngestPipeline {
         return new IngestPipeline(source);
     }
 
+    /**
+     * @deprecated set {@code quarkus.camel.langchain4j.ingest.<name>.embedding-store} instead; setting
+     *             both fails the start
+     */
+    @Deprecated(since = "4.0.0", forRemoval = true)
     public IngestPipeline embeddingStore(String beanName) {
         this.embeddingStoreName = beanName;
         return this;
     }
 
+    /**
+     * @deprecated set {@code quarkus.camel.langchain4j.ingest.<name>.embedding-model} instead; setting
+     *             both fails the start
+     */
+    @Deprecated(since = "4.0.0", forRemoval = true)
     public IngestPipeline embeddingModel(String beanName) {
         this.embeddingModelName = beanName;
         return this;
     }
 
     /**
-     * Parses the consumed payload into text before splitting: {@code tika} extracts plain text
-     * in-process, {@code docling} converts to markdown through a Docling Serve instance. The
-     * corresponding extension must be on the classpath; the twin of the {@code parser}
-     * configuration property.
+     * @deprecated set {@code quarkus.camel.langchain4j.ingest.<name>.max-segment-size} and
+     *             {@code max-overlap-size} instead; setting both fails the start
      */
-    public IngestPipeline parser(String parser) {
-        // the same rule the configuration path is held to at build time; the null check comes
-        // first because the unmodifiable set's contains(null) throws a bare NPE
-        if (parser == null || !SUPPORTED_PARSERS.contains(parser)) {
-            throw new IllegalArgumentException("parser must be one of " + SUPPORTED_PARSERS
-                    + " (got '" + parser + "')");
-        }
-        this.parser = parser;
-        return this;
-    }
-
+    @Deprecated(since = "4.0.0", forRemoval = true)
     public IngestPipeline splitter(int maxSegmentSize, int maxOverlapSize) {
-        // the same rule the configuration path is held to at build time, so both paths reject
-        // the same values rather than failing later inside the splitter
         if (maxSegmentSize <= 0 || maxOverlapSize < 0 || maxOverlapSize >= maxSegmentSize) {
             throw new IllegalArgumentException("max-segment-size must be positive and max-overlap-size must be "
                     + "smaller than it (got " + maxSegmentSize + " / " + maxOverlapSize + ")");
@@ -90,118 +77,23 @@ public final class IngestPipeline {
         return this;
     }
 
-    /**
-     * How many segments are embedded per request to the embedding model; the twin of the
-     * {@code embedding-batch-size} configuration property.
-     */
-    public IngestPipeline embeddingBatchSize(int embeddingBatchSize) {
-        // the same rule the configuration path is held to at build time
-        if (embeddingBatchSize < 1) {
-            throw new IllegalArgumentException(
-                    "embedding-batch-size must be positive (got " + embeddingBatchSize + ")");
-        }
-        this.embeddingBatchSize = embeddingBatchSize;
-        return this;
-    }
-
-    /**
-     * Maximum size of one document in characters; 0, the default, means no limit. The twin of
-     * the {@code max-document-size} configuration property.
-     */
-    public IngestPipeline maxDocumentSize(int maxDocumentSize) {
-        // the same rule the configuration path is held to at build time
-        if (maxDocumentSize < 0) {
-            throw new IllegalArgumentException(
-                    "max-document-size must not be negative, 0 meaning no limit (got " + maxDocumentSize + ")");
-        }
-        this.maxDocumentSize = maxDocumentSize;
-        return this;
-    }
-
-    /**
-     * Name of the {@code DocumentSplitter} bean replacing the default recursive splitting; the
-     * twin of the {@code document-splitter} configuration property. The splitter sizes are then
-     * ignored.
-     */
-    public IngestPipeline documentSplitter(String beanName) {
-        this.documentSplitterName = beanName;
-        return this;
-    }
-
-    /**
-     * What the consumed payload is: {@code text}, the default, is split and embedded segment by
-     * segment; {@code media} (audio, an image, video or a PDF, told apart by the MIME type) is
-     * embedded whole, as one vector, by a model that declares the matching content type. The
-     * twin of the {@code modality} configuration property.
-     */
-    public IngestPipeline modality(String modality) {
-        // the same rule the configuration path is held to at build time
-        if (modality == null || !SUPPORTED_MODALITIES.contains(modality)) {
-            throw new IllegalArgumentException("modality must be one of " + SUPPORTED_MODALITIES
-                    + " (got '" + modality + "')");
-        }
-        this.modality = modality;
-        return this;
-    }
-
-    /**
-     * MIME type of a media payload, such as {@code audio/wav}; unset, it is derived from the
-     * document id's file extension. The twin of the {@code content-type} configuration property.
-     */
-    public IngestPipeline contentType(String contentType) {
-        this.contentType = contentType;
-        return this;
-    }
-
     Source source() {
         return source;
     }
 
-    String sourceType() {
-        return source.type();
+    String embeddingStoreName() {
+        return embeddingStoreName;
     }
 
-    String sourceUri() {
-        return source.uri();
+    String embeddingModelName() {
+        return embeddingModelName;
     }
 
-    Optional<String> embeddingStoreName() {
-        return Optional.ofNullable(embeddingStoreName);
-    }
-
-    Optional<String> embeddingModelName() {
-        return Optional.ofNullable(embeddingModelName);
-    }
-
-    Optional<String> parser() {
-        return Optional.ofNullable(parser);
-    }
-
-    Optional<String> modality() {
-        return Optional.ofNullable(modality);
-    }
-
-    Optional<String> contentType() {
-        return Optional.ofNullable(contentType);
-    }
-
-    int maxSegmentSize() {
+    Integer maxSegmentSize() {
         return maxSegmentSize;
     }
 
-    int maxOverlapSize() {
+    Integer maxOverlapSize() {
         return maxOverlapSize;
-    }
-
-    int embeddingBatchSize() {
-        return embeddingBatchSize;
-    }
-
-    int maxDocumentSize() {
-        return maxDocumentSize;
-    }
-
-    Optional<String> documentSplitterName() {
-        return Optional.ofNullable(documentSplitterName);
     }
 }

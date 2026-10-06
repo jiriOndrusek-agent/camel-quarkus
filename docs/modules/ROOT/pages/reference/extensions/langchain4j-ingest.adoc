@@ -62,8 +62,8 @@ quarkus.camel.langchain4j.ingest.products.embedding-model=my-model
 Each file is read as UTF-8 text — unless a `parser` turns binary formats into text first, see below — split into overlapping segments (`max-segment-size`, `max-overlap-size`; or a `DocumentSplitter` CDI bean named by `document-splitter`, which then replaces the sizes), embedded in batches (`embedding-batch-size`, 32 by default) and written to the store; a document is held in memory whole while it is split, so `max-document-size` can cap it in characters — 0, the default, means no limit, and an oversized document fails the exchange cleanly.
 `embedding-store` and `embedding-model` name CDI beans and may be omitted when the application has exactly one of each.
 Every segment carries `camel_ingest_pipeline` and `camel_ingest_document_id` metadata, so retrieval can cite which document an answer came from (up to 3.39.x the keys were `camel_quarkus_pipeline` and `camel_quarkus_document_id` — see the migration guide).
-Apart from `enabled` and the `source.*` settings shown here, properties are fixed at build time.
-A pipeline declared through runtime properties alone — nothing but a `source.directory`, say — is invisible to build-time validation; its checks, including the clash with an equally named `@Ingest` pipeline, report at startup instead.
+Only `source.uri`, `parser` and `modality` are fixed at build time, and only they are checked by the build; every other property is runtime configuration, checked at startup.
+The sizes and the media conflicts are checked by the `camel-langchain4j-ingest` component, whose messages name its endpoint options — `maxSegmentSize` for `max-segment-size`.
 
 [NOTE]
 ====
@@ -79,7 +79,7 @@ Not everything a source delivers belongs in a knowledge base.
 Per pipeline, `filter.include-id` and `filter.exclude-id` take comma-separated Ant-style patterns matched against the document id — exclusion wins, and a rejected delivery never reads the body or occupies its dedup claim.
 `filter.min-document-size` rejects documents too short to carry retrievable content, and `filter.document-filter` names a Camel `Predicate` bean evaluated with the body available.
 A rejected delivery is answered with a `filtered` outcome; the enforcement lives in the `camel-langchain4j-ingest` component.
-An `@Ingest` pipeline is filtered the same way: the builder has no filter methods, and the `filter.*` properties apply to it too.
+An `@Ingest` pipeline is filtered the same way, through the same properties.
 
 [source,properties]
 ----
@@ -179,7 +179,7 @@ A consumer-fed pipeline releases the claim of an empty delivery instead.
 It needs the `camel-quarkus-docling` extension and the instance's address in `camel.component.docling.docling-serve-url`.
 
 A missing parser extension fails the build naming the artifact, the same way a missing consumer component does.
-The Java twin is `IngestPipeline.parser("tika")`, and a consumer-fed pipeline parses the same way — the payload the consumer delivers goes to the parser first.
+A consumer-fed pipeline parses the same way — the payload the consumer delivers goes to the parser first.
 With a parser, `max-document-size` also rejects a raw payload larger than the cap (in bytes) before it reaches the parser, on top of capping the extracted text (in characters).
 
 [id="extensions-langchain4j-ingest-usage-ingesting-media-images-audio-video-and-pdf"]
@@ -199,7 +199,7 @@ quarkus.camel.langchain4j.ingest.photos.embedding-store=photos
 
 The MIME type handed to the model comes from `content-type` or, when unset, from the file extension through Camel's MIME table (wav, mp3, flac, ogg, opus, m4a, aac and aiff for audio; png, jpg, gif and webp for images; mp4, mov and webm for video; pdf); a file whose type cannot be determined fails the exchange, and `content-type` without `modality=media` is rejected like the parser and splitter conflicts.
 Images are embedded today by several LangChain4j providers; no provider embeds audio out of the box yet, so an audio model is a CDI bean of your own that declares `AUDIO` — typically a client of an audio embedding service — and either way the same bean embeds the query image or clip at retrieval time.
-The Java twin is `IngestPipeline.modality("media")`, and a consumer-fed pipeline embeds the delivered payload the same way.
+A consumer-fed pipeline embeds the delivered payload the same way.
 
 [id="extensions-langchain4j-ingest-usage-other-sources-declared-in-java"]
 === Other sources, declared in Java
@@ -212,16 +212,21 @@ Such a pipeline is declared in Java with `@Ingest` and the Camel Endpoint DSL:
 @Ingest("events")
 IngestPipeline events() {
     return IngestPipeline.from(Source.endpoint(dsl -> dsl.kafka("ingest-events").groupId("ingest"))
-                    .documentId("CamelKafkaKey"))
-            .embeddingStore("events");
+            .documentId("CamelKafkaKey"));
 }
 ----
 
+[source,properties]
+----
+quarkus.camel.langchain4j.ingest.events.embedding-store=events
+----
+
 Typing `dsl.` lists a factory for every component, each completing its own typed options.
+The method declares the source; every other property — `embedding-store`, `parser`, the sizes, `filter.*`, `enabled` — is configuration under the pipeline's name, as for a configured pipeline.
+`source.*` properties are rejected for it, `source.uri` at build time — except `source.recursive`, which cannot be told apart from its default and is silently ignored; use `Source.recursive()` instead.
+The builder's `embeddingStore()`, `embeddingModel()` and `splitter()` are deprecated; setting one together with its property fails the start.
 `@Ingest` is a CDI qualifier that makes the method a producer method, so its parameters are injection points (with `quarkus.arc.auto-producer-methods=false`, add `@Produces`).
-It runs once at startup, never for a pipeline switched off, and its name must be unique and unused by configured pipelines.
-`enabled=false` in configuration switches a Java-declared pipeline off, and the `filter.*` properties apply to it too.
-Other `source.*` properties are rejected for a Java-declared pipeline — except `source.recursive`, which cannot be told apart from its default and is silently ignored; use `Source.recursive()` instead.
+It runs once at startup, never for a pipeline switched off, and its name must be unique.
 A component missing from the classpath fails at startup with an error naming the extension artifact that provides it — the DSL compiles regardless, since its factories all ship in one artifact.
 
 Ingestion needs a stable id per document, and where it lives is the consumer's business: `documentId` names the header — the record key `CamelKafkaKey` above, `CamelAwsS3Key` for S3 — or gives a simple-language expression.
@@ -306,6 +311,7 @@ makes the pipeline read the directory named by the runtime `source.directory`
 property instead. Fixed at build time by design — a runtime-overridable consumer
 URI would be arbitrary component invocation. Property placeholders inside it still
 resolve at startup, so credentials and endpoints remain runtime configuration.
+An `@Ingest` pipeline takes its source from the method, so this is rejected for it.
 | `string`
 | 
 
@@ -331,70 +337,6 @@ must not be set, the splitter sizes and `embedding-batch-size` do not apply, and
 bytes.
 | `string`
 | `text`
-
-a|icon:lock[title=Fixed at build time] [[quarkus-camel-langchain4j-ingest-pipeline-name-content-type]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-content-type[quarkus.camel.langchain4j.ingest."pipeline-name".content-type]`
-
-MIME type of a media payload, such as `audio/wav` or `image/png`, handed to the
-embedding model. When not set, it is derived from the document id's file extension
-through Camel's MIME table; a document whose type cannot be determined, or whose
-medium the model does not declare, fails the exchange. Only valid with
-`modality=media`: set without it, the pipeline is rejected.
-| `string`
-| 
-
-a|icon:lock[title=Fixed at build time] [[quarkus-camel-langchain4j-ingest-pipeline-name-embedding-store]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-embedding-store[quarkus.camel.langchain4j.ingest."pipeline-name".embedding-store]`
-
-Name of the `EmbeddingStore` bean to write to. When not set, the only one present is
-used.
-| `string`
-| 
-
-a|icon:lock[title=Fixed at build time] [[quarkus-camel-langchain4j-ingest-pipeline-name-embedding-model]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-embedding-model[quarkus.camel.langchain4j.ingest."pipeline-name".embedding-model]`
-
-Name of the `EmbeddingModel` bean to embed with. When not set, the only one present is
-used.
-| `string`
-| 
-
-a|icon:lock[title=Fixed at build time] [[quarkus-camel-langchain4j-ingest-pipeline-name-max-segment-size]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-max-segment-size[quarkus.camel.langchain4j.ingest."pipeline-name".max-segment-size]`
-
-Maximum size of one segment, in characters.
-| `int`
-| `500`
-
-a|icon:lock[title=Fixed at build time] [[quarkus-camel-langchain4j-ingest-pipeline-name-max-overlap-size]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-max-overlap-size[quarkus.camel.langchain4j.ingest."pipeline-name".max-overlap-size]`
-
-How much of the previous segment each segment repeats, in characters. Overlap keeps a
-sentence split across a boundary retrievable from either side.
-| `int`
-| `50`
-
-a|icon:lock[title=Fixed at build time] [[quarkus-camel-langchain4j-ingest-pipeline-name-embedding-batch-size]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-embedding-batch-size[quarkus.camel.langchain4j.ingest."pipeline-name".embedding-batch-size]`
-
-How many segments are embedded per request to the embedding model. Providers with
-generous per-request limits ingest large documents faster with a bigger batch; a batch
-carries at most `embedding-batch-size` × `max-segment-size` characters, so tune the two
-together against the provider's token limits.
-| `int`
-| `32`
-
-a|icon:lock[title=Fixed at build time] [[quarkus-camel-langchain4j-ingest-pipeline-name-max-document-size]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-max-document-size[quarkus.camel.langchain4j.ingest."pipeline-name".max-document-size]`
-
-Maximum size of one document in characters, applied to the text about to be split;
-0, the default, means no limit. The pipeline holds a document in memory whole, so the
-cap is the protection against oversized — on a consumer-fed pipeline, attacker-sized —
-payloads. An oversized document fails the exchange cleanly.
-| `int`
-| `0`
-
-a|icon:lock[title=Fixed at build time] [[quarkus-camel-langchain4j-ingest-pipeline-name-document-splitter]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-document-splitter[quarkus.camel.langchain4j.ingest."pipeline-name".document-splitter]`
-
-Name of the `DocumentSplitter` bean replacing the default recursive splitting;
-`max-segment-size` and `max-overlap-size` are then ignored. Looked up by name only —
-an application may hold unrelated splitters. Segments returned without the identity
-metadata are re-stamped, so a custom splitter cannot break citation.
-| `string`
-| 
 
 a| [[quarkus-camel-langchain4j-ingest-pipeline-name-enabled]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-enabled[quarkus.camel.langchain4j.ingest."pipeline-name".enabled]`
 
@@ -444,6 +386,70 @@ expansion before Camel ever saw it. When not set, a pipeline reading a directory
 uses the file name, and one consuming from a component uses the
 `CamelLangChain4jIngestDocumentId` header (the deprecated 3.39 name
 `CamelIngestDocumentId` is still read as a fallback).
+| `string`
+| 
+
+a| [[quarkus-camel-langchain4j-ingest-pipeline-name-embedding-store]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-embedding-store[quarkus.camel.langchain4j.ingest."pipeline-name".embedding-store]`
+
+Name of the `EmbeddingStore` bean to write to. When not set, the only one present is
+used.
+| `string`
+| 
+
+a| [[quarkus-camel-langchain4j-ingest-pipeline-name-embedding-model]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-embedding-model[quarkus.camel.langchain4j.ingest."pipeline-name".embedding-model]`
+
+Name of the `EmbeddingModel` bean to embed with. When not set, the only one present is
+used.
+| `string`
+| 
+
+a| [[quarkus-camel-langchain4j-ingest-pipeline-name-content-type]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-content-type[quarkus.camel.langchain4j.ingest."pipeline-name".content-type]`
+
+MIME type of a media payload, such as `audio/wav` or `image/png`, handed to the
+embedding model. When not set, it is derived from the document id's file extension
+through Camel's MIME table; a document whose type cannot be determined, or whose
+medium the model does not declare, fails the exchange. Only valid with
+`modality=media`: set without it, the pipeline fails to start.
+| `string`
+| 
+
+a| [[quarkus-camel-langchain4j-ingest-pipeline-name-max-segment-size]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-max-segment-size[quarkus.camel.langchain4j.ingest."pipeline-name".max-segment-size]`
+
+Maximum size of one segment, in characters; 500 when not set.
+| `int`
+| 
+
+a| [[quarkus-camel-langchain4j-ingest-pipeline-name-max-overlap-size]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-max-overlap-size[quarkus.camel.langchain4j.ingest."pipeline-name".max-overlap-size]`
+
+How much of the previous segment each segment repeats, in characters; 50 when not set.
+Overlap keeps a sentence split across a boundary retrievable from either side.
+| `int`
+| 
+
+a| [[quarkus-camel-langchain4j-ingest-pipeline-name-embedding-batch-size]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-embedding-batch-size[quarkus.camel.langchain4j.ingest."pipeline-name".embedding-batch-size]`
+
+How many segments are embedded per request to the embedding model. Providers with
+generous per-request limits ingest large documents faster with a bigger batch; a batch
+carries at most `embedding-batch-size` × `max-segment-size` characters, so tune the two
+together against the provider's token limits.
+| `int`
+| `32`
+
+a| [[quarkus-camel-langchain4j-ingest-pipeline-name-max-document-size]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-max-document-size[quarkus.camel.langchain4j.ingest."pipeline-name".max-document-size]`
+
+Maximum size of one document in characters, applied to the text about to be split;
+0, the default, means no limit. The pipeline holds a document in memory whole, so the
+cap is the protection against oversized — on a consumer-fed pipeline, attacker-sized —
+payloads. An oversized document fails the exchange cleanly.
+| `int`
+| `0`
+
+a| [[quarkus-camel-langchain4j-ingest-pipeline-name-document-splitter]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-document-splitter[quarkus.camel.langchain4j.ingest."pipeline-name".document-splitter]`
+
+Name of the `DocumentSplitter` bean replacing the default recursive splitting;
+`max-segment-size` and `max-overlap-size` are then ignored. Looked up by name only —
+an application may hold unrelated splitters. Segments returned without the identity
+metadata are re-stamped, so a custom splitter cannot break citation.
 | `string`
 | 
 

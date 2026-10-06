@@ -25,26 +25,32 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-/** A pipeline declared both in configuration and through {@code @Ingest} fails the build. */
-class IngestDuplicatePipelineNameTest {
+/**
+ * A deprecated builder setter still fills its property, but setting the same property in
+ * configuration as well fails the start rather than letting one silently win.
+ */
+class IngestDeprecatedSetterConflictTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
-            .withApplicationRoot(jar -> jar.addClasses(Pipelines.class))
+            .withApplicationRoot(jar -> jar.addClasses(TestEmbeddingBeans.class, Pipelines.class))
             .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.embedding-store", "store")
-            .assertException(t -> ValidationTestSupport.assertFailure(t, "declared more than once"));
+            .assertException(t -> ValidationTestSupport.assertFailure(t,
+                    "Ingestion pipeline 'docs' sets embedding-store twice",
+                    "deprecated IngestPipeline.embeddingStore()", "Keep the configuration property"));
 
     @Test
-    void buildMustFail() {
-        Assertions.fail("The build was expected to fail");
+    void startMustFail() {
+        Assertions.fail("The application start was expected to fail");
     }
 
     @ApplicationScoped
     public static class Pipelines {
 
+        @SuppressWarnings("removal")
         @Ingest("docs")
         IngestPipeline docs() {
-            return IngestPipeline.from(Source.file("target/docs"));
+            return IngestPipeline.from(Source.file("target/deprecated-conflict")).embeddingStore("store");
         }
     }
 }

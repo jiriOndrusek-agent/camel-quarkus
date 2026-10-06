@@ -47,9 +47,7 @@ class IngestBuilderInvalidNameTest {
 
         @Ingest("docs/en")
         IngestPipeline docs() {
-            return IngestPipeline.from(Source.file("target/invalid-name"))
-                    .embeddingStore("store")
-                    .embeddingModel("model");
+            return IngestPipeline.from(Source.file("target/invalid-name"));
         }
     }
 }

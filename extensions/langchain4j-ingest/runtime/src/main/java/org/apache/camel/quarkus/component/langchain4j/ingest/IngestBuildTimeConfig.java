@@ -27,24 +27,13 @@ import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithParentName;
 
 /**
- * The shape of an ingestion pipeline: what it reads and where it writes. Locations that differ
- * per deployment are runtime configuration, see {@link IngestRunTimeConfig}.
+ * What is fixed at build time: the consumer URI, the parser and the modality, which decide the
+ * route's shape and the extensions the build checks for. Everything else, for every pipeline, is
+ * runtime configuration, see {@link IngestRunTimeConfig}.
  */
 @ConfigMapping(prefix = "quarkus.camel.langchain4j.ingest")
 @ConfigRoot(phase = ConfigPhase.BUILD_AND_RUN_TIME_FIXED)
 public interface IngestBuildTimeConfig {
-
-    /** Mirrors the {@code @WithDefault} below, which can only carry a literal. */
-    int DEFAULT_MAX_SEGMENT_SIZE = 500;
-
-    /** Mirrors the {@code @WithDefault} below, which can only carry a literal. */
-    int DEFAULT_MAX_OVERLAP_SIZE = 50;
-
-    /** Mirrors the {@code @WithDefault} below, which can only carry a literal. */
-    int DEFAULT_EMBEDDING_BATCH_SIZE = 32;
-
-    /** Mirrors the {@code @WithDefault} below, which can only carry a literal; 0 means no limit. */
-    int DEFAULT_MAX_DOCUMENT_SIZE = 0;
 
     /**
      * Ingestion pipelines by name.
@@ -83,66 +72,6 @@ public interface IngestBuildTimeConfig {
         String modality();
 
         /**
-         * MIME type of a media payload, such as `audio/wav` or `image/png`, handed to the
-         * embedding model. When not set, it is derived from the document id's file extension
-         * through Camel's MIME table; a document whose type cannot be determined, or whose
-         * medium the model does not declare, fails the exchange. Only valid with
-         * `modality=media`: set without it, the pipeline is rejected.
-         */
-        Optional<String> contentType();
-
-        /**
-         * Name of the `EmbeddingStore` bean to write to. When not set, the only one present is
-         * used.
-         */
-        Optional<String> embeddingStore();
-
-        /**
-         * Name of the `EmbeddingModel` bean to embed with. When not set, the only one present is
-         * used.
-         */
-        Optional<String> embeddingModel();
-
-        /**
-         * Maximum size of one segment, in characters.
-         */
-        @WithDefault("500")
-        int maxSegmentSize();
-
-        /**
-         * How much of the previous segment each segment repeats, in characters. Overlap keeps a
-         * sentence split across a boundary retrievable from either side.
-         */
-        @WithDefault("50")
-        int maxOverlapSize();
-
-        /**
-         * How many segments are embedded per request to the embedding model. Providers with
-         * generous per-request limits ingest large documents faster with a bigger batch; a batch
-         * carries at most `embedding-batch-size` × `max-segment-size` characters, so tune the two
-         * together against the provider's token limits.
-         */
-        @WithDefault("32")
-        int embeddingBatchSize();
-
-        /**
-         * Maximum size of one document in characters, applied to the text about to be split;
-         * 0, the default, means no limit. The pipeline holds a document in memory whole, so the
-         * cap is the protection against oversized — on a consumer-fed pipeline, attacker-sized —
-         * payloads. An oversized document fails the exchange cleanly.
-         */
-        @WithDefault("0")
-        int maxDocumentSize();
-
-        /**
-         * Name of the `DocumentSplitter` bean replacing the default recursive splitting;
-         * `max-segment-size` and `max-overlap-size` are then ignored. Looked up by name only —
-         * an application may hold unrelated splitters. Segments returned without the identity
-         * metadata are re-stamped, so a custom splitter cannot break citation.
-         */
-        Optional<String> documentSplitter();
-
-        /**
          * A pipeline reads either a directory or a Camel consumer, and the two halves of that
          * choice deliberately sit in different config roots: the consumer URI is fixed at build
          * time, while the directory is a location that changes per deployment and so lives in
@@ -158,6 +87,7 @@ public interface IngestBuildTimeConfig {
              * property instead. Fixed at build time by design — a runtime-overridable consumer
              * URI would be arbitrary component invocation. Property placeholders inside it still
              * resolve at startup, so credentials and endpoints remain runtime configuration.
+             * An `@Ingest` pipeline takes its source from the method, so this is rejected for it.
              */
             Optional<String> uri();
         }

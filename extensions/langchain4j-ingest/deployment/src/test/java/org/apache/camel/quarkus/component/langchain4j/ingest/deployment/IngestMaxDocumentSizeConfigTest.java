@@ -21,19 +21,19 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-/** The document size cap is validated at build time on the configuration path. */
+/** A negative document size cap is forwarded to the component, which rejects it at startup. */
 class IngestMaxDocumentSizeConfigTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
-            .withApplicationRoot(jar -> {
-            })
+            .withApplicationRoot(jar -> jar.addClasses(TestEmbeddingBeans.class))
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.source.directory", "target/max-document-size")
             .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.max-document-size", "-1")
             .assertException(t -> ValidationTestSupport.assertFailure(t,
-                    "max-document-size must not be negative"));
+                    "Ingestion pipeline 'docs': maxDocumentSize must not be negative (got -1)"));
 
     @Test
-    void buildMustFail() {
-        Assertions.fail("The build was expected to fail");
+    void startMustFail() {
+        Assertions.fail("The application start was expected to fail");
     }
 }

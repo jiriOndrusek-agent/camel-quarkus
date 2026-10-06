@@ -115,7 +115,7 @@ public class IngestRoutes extends RouteBuilder {
         // SmallRye only materialises a map key for the mapping whose structure a property matches
         Set<String> names = new TreeSet<>(buildTimeConfig.pipelines().keySet());
         names.addAll(runTimeConfig.pipelines().keySet());
-        names.removeAll(javaNames());
+        names.addAll(javaNames());
 
         for (String name : names) {
             IngestRunTimeConfig.PipelineRunTimeConfig runtime = runTimeConfig.pipelines().get(name);
@@ -123,11 +123,9 @@ public class IngestRoutes extends RouteBuilder {
                 LOG.infof("Ingestion pipeline '%s' is disabled", name);
                 continue;
             }
-            compositionRoute(PipelineSpec.fromConfig(name, buildTimeConfig.pipelines().get(name), runtime));
+            compositionRoute(PipelineSpec.of(name, buildTimeConfig.pipelines().get(name), runtime,
+                    javaPipelines().get(name)));
         }
-
-        javaPipelines().forEach((name, pipeline) -> compositionRoute(
-                PipelineSpec.fromBuilder(name, pipeline, runTimeConfig.pipelines().get(name))));
     }
 
     /** The names of all {@code @Ingest} pipelines, switched off or not. */
@@ -165,13 +163,12 @@ public class IngestRoutes extends RouteBuilder {
             names.add(name);
             IngestRunTimeConfig.PipelineRunTimeConfig external = runTimeConfig.pipelines().get(name);
             if (external != null && !external.enabled()) {
-                LOG.infof("Ingestion pipeline '%s' (builder) is disabled", name);
                 continue;
             }
-            // enabled and the filter.* options are what configuration may say about a builder
-            // pipeline; anything about its source would be quietly overruled by the @Ingest method,
-            // so it is an error instead (source.recursive cannot be told apart from its default, so
-            // it alone goes undetected - Source.recursive() is its builder twin)
+            // configuration owns every property of an @Ingest pipeline but its source, which the
+            // method declares: a source.* key would be quietly overruled, so it is an error instead
+            // (source.recursive cannot be told apart from its default, so it alone goes undetected -
+            // Source.recursive() is its twin; source.uri fails the build)
             if (external != null && (external.source().directory().isPresent()
                     || external.source().documentId().isPresent()
                     || external.source().idempotentRepository().isPresent()
@@ -309,13 +306,11 @@ public class IngestRoutes extends RouteBuilder {
     }
 
     private EmbeddingStore<TextSegment> resolveStore(PipelineSpec spec) {
-        return resolve(spec, storeCandidates, spec.embeddingStore(), "embedding store", "embedding-store",
-                "embeddingStore");
+        return resolve(spec.name(), storeCandidates, spec.embeddingStore(), "embedding store", "embedding-store");
     }
 
     private EmbeddingModel resolveModel(PipelineSpec spec) {
-        return resolve(spec, modelCandidates, spec.embeddingModel(), "embedding model", "embedding-model",
-                "embeddingModel");
+        return resolve(spec.name(), modelCandidates, spec.embeddingModel(), "embedding model", "embedding-model");
     }
 
     /**
@@ -325,9 +320,7 @@ public class IngestRoutes extends RouteBuilder {
      * discovered first. A raw-typed registry search cannot serve here: it never matches a bean
      * typed {@code EmbeddingStore<TextSegment>}.
      */
-    private <T> T resolve(PipelineSpec spec, Instance<T> candidates, String configured, String what,
-            String property, String setter) {
-        String name = spec.name();
+    private <T> T resolve(String name, Instance<T> candidates, String configured, String what, String property) {
         if (configured != null) {
             Instance<T> named = candidates.select(NamedLiteral.of(configured));
             if (named.isUnsatisfied()) {
@@ -343,12 +336,9 @@ public class IngestRoutes extends RouteBuilder {
                     + ", but no bean of that type exists. Define one, for example with a @Produces method.");
         }
         if (handles.size() > 1) {
-            // a Java-declared pipeline names its beans in the @Ingest method: the build rejects
-            // build-time configuration keys for its name
             throw new IllegalStateException("Ingestion pipeline '" + name + "' found " + handles.size() + " "
-                    + what + " beans. Name the one to use with " + (spec.declaredInJava()
-                            ? "IngestPipeline." + setter + "(\"<bean name>\") in its @Ingest method"
-                            : "quarkus.camel.langchain4j.ingest." + name + "." + property));
+                    + what + " beans. Name the one to use with quarkus.camel.langchain4j.ingest." + name + "."
+                    + property);
         }
         return handles.get(0).get();
     }

@@ -44,7 +44,6 @@ public final class Source {
     private static final EndpointBuilderFactory DSL = new EndpointBuilderFactory() {
     };
 
-    private final String type;
     private String directory;
     private String uri;
     private String documentId;
@@ -52,19 +51,18 @@ public final class Source {
     private boolean idempotentRepositoryAutoCreate;
     private boolean recursive = true;
 
-    private Source(String type) {
-        this.type = type;
+    private Source() {
     }
 
     public static Source file(String directory) {
-        Source source = new Source("file");
+        Source source = new Source();
         source.directory = requireText(directory, "directory");
         return source;
     }
 
     /** A raw consumer URI. Prefer {@link #endpoint(org.apache.camel.builder.EndpointConsumerBuilder)}. */
     public static Source endpoint(String uri) {
-        Source source = new Source("endpoint");
+        Source source = new Source();
         source.uri = requireText(uri, "uri");
         return source;
     }
@@ -128,10 +126,6 @@ public final class Source {
             throw new IllegalArgumentException("Source." + what + " must not be null or blank");
         }
         return value;
-    }
-
-    String type() {
-        return type;
     }
 
     String uri() {

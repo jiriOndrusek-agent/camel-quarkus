@@ -16,16 +16,18 @@
  */
 package org.apache.camel.quarkus.component.langchain4j.ingest;
 
+import java.util.Optional;
+
 /**
- * One ingestion pipeline as the composition consumes it, whichever way it was declared:
- * {@link #fromConfig} or {@link #fromBuilder}. The constructor holds every rule a pipeline is
- * checked against at startup, so both declaration paths are checked alike. Exactly one of
- * {@code directory} and {@code uri} is set; bean references are names, resolved by
- * {@link IngestRoutes}.
+ * One ingestion pipeline as the composition consumes it, configured or declared with
+ * {@code @Ingest}: see {@link #of}. The constructor holds the rules a pipeline is checked against
+ * at startup; the size bounds and the media conflicts are the component's to check, and the
+ * build-time keys are checked by the build. Exactly one of {@code directory} and {@code uri} is
+ * set; bean references are names, resolved by {@link IngestRoutes}. A {@code null} size is left
+ * to the sink Kamelet's default.
  */
 record PipelineSpec(
         String name,
-        boolean declaredInJava,
         String directory,
         String uri,
         boolean recursive,
@@ -35,9 +37,9 @@ record PipelineSpec(
         IngestParser parser,
         boolean media,
         String contentType,
-        int maxSegmentSize,
-        int maxOverlapSize,
-        int embeddingBatchSize,
+        Integer maxSegmentSize,
+        Integer maxOverlapSize,
+        Integer embeddingBatchSize,
         int maxDocumentSize,
         String documentSplitter,
         String embeddingStore,
@@ -85,91 +87,53 @@ record PipelineSpec(
                     + "' sets source.idempotent-repository-auto-create but no source.idempotent-repository name to"
                     + " create the register under.");
         }
-        if (maxSegmentSize <= 0 || maxOverlapSize < 0 || maxOverlapSize >= maxSegmentSize) {
-            throw new IllegalArgumentException("Ingestion pipeline '" + name + "': max-segment-size must be positive"
-                    + " and max-overlap-size must be smaller than it (got " + maxSegmentSize + " / " + maxOverlapSize
-                    + ")");
-        }
-        if (embeddingBatchSize < 1) {
-            throw new IllegalArgumentException("Ingestion pipeline '" + name
-                    + "': embedding-batch-size must be positive (got " + embeddingBatchSize + ")");
-        }
-        if (maxDocumentSize < 0) {
-            throw new IllegalArgumentException("Ingestion pipeline '" + name
-                    + "': max-document-size must not be negative, 0 meaning no limit (got " + maxDocumentSize + ")");
-        }
-        // a media document is embedded whole: nothing to parse, nothing to split
-        if (media && parser != null) {
-            throw new IllegalArgumentException("Ingestion pipeline '" + name
-                    + "' sets modality 'media' together with a parser. A media document is embedded whole and"
-                    + " never parsed; remove one of them.");
-        }
-        if (media && documentSplitter != null) {
-            throw new IllegalArgumentException("Ingestion pipeline '" + name
-                    + "' sets modality 'media' together with a document splitter. A media document is embedded"
-                    + " whole and never split; remove one of them.");
-        }
-        if (!media && contentType != null) {
-            // a content type types a media payload; with text it is a sign that media was forgotten
-            throw new IllegalArgumentException("Ingestion pipeline '" + name
-                    + "' sets a content type without modality 'media'. A content type types a media payload;"
-                    + " set modality(\"media\") or remove it.");
-        }
-        if (filters.minDocumentSize() < 0) {
-            throw new IllegalArgumentException("Ingestion pipeline '" + name
-                    + "': filter.min-document-size must not be negative (got " + filters.minDocumentSize() + ")");
-        }
-    }
-
-    /** A pipeline declared in configuration; either config root may lack the name. */
-    static PipelineSpec fromConfig(String name, IngestBuildTimeConfig.PipelineBuildTimeConfig buildTime,
-            IngestRunTimeConfig.PipelineRunTimeConfig runTime) {
-        IngestRunTimeConfig.PipelineRunTimeConfig.SourceRunTimeConfig source = runTime == null ? null : runTime.source();
-        return new PipelineSpec(name, false,
-                source == null ? null : source.directory().orElse(null),
-                buildTime == null ? null : buildTime.source().uri().orElse(null),
-                source == null || source.recursive(),
-                source == null ? null : source.documentId().orElse(null),
-                source == null ? null : source.idempotentRepository().orElse(null),
-                source != null && source.idempotentRepositoryAutoCreate(),
-                buildTime == null ? null : IngestParser.fromLabel(buildTime.parser().orElse(null)),
-                buildTime != null && "media".equals(buildTime.modality()),
-                buildTime == null ? null : buildTime.contentType().orElse(null),
-                buildTime == null ? IngestBuildTimeConfig.DEFAULT_MAX_SEGMENT_SIZE : buildTime.maxSegmentSize(),
-                buildTime == null ? IngestBuildTimeConfig.DEFAULT_MAX_OVERLAP_SIZE : buildTime.maxOverlapSize(),
-                buildTime == null ? IngestBuildTimeConfig.DEFAULT_EMBEDDING_BATCH_SIZE : buildTime.embeddingBatchSize(),
-                buildTime == null ? IngestBuildTimeConfig.DEFAULT_MAX_DOCUMENT_SIZE : buildTime.maxDocumentSize(),
-                buildTime == null ? null : buildTime.documentSplitter().orElse(null),
-                buildTime == null ? null : buildTime.embeddingStore().orElse(null),
-                buildTime == null ? null : buildTime.embeddingModel().orElse(null),
-                runTime == null ? Filters.NONE : Filters.of(runTime.filter()));
     }
 
     /**
-     * A pipeline an {@code @Ingest} method returned. The builder has no filter API, so the
-     * {@code filter.*} configuration of the same name supplies the filters.
+     * A pipeline from its configuration - either config root may lack the name - and, for an
+     * {@code @Ingest} pipeline, the method's {@link IngestPipeline}. Configuration owns every
+     * property but the source, which comes from exactly one place: the method, else the
+     * configuration.
      */
-    static PipelineSpec fromBuilder(String name, IngestPipeline pipeline,
-            IngestRunTimeConfig.PipelineRunTimeConfig configured) {
-        Source source = pipeline.source();
-        return new PipelineSpec(name, true,
-                source.directory(),
-                source.uri(),
-                source.isRecursive(),
-                source.documentId(),
-                source.idempotentRepository(),
-                source.isIdempotentRepositoryAutoCreate(),
-                IngestParser.fromLabel(pipeline.parser().orElse(null)),
-                "media".equals(pipeline.modality().orElse(null)),
-                pipeline.contentType().orElse(null),
-                pipeline.maxSegmentSize(),
-                pipeline.maxOverlapSize(),
-                pipeline.embeddingBatchSize(),
-                pipeline.maxDocumentSize(),
-                pipeline.documentSplitterName().orElse(null),
-                pipeline.embeddingStoreName().orElse(null),
-                pipeline.embeddingModelName().orElse(null),
-                configured == null ? Filters.NONE : Filters.of(configured.filter()));
+    static PipelineSpec of(String name, IngestBuildTimeConfig.PipelineBuildTimeConfig buildTime,
+            IngestRunTimeConfig.PipelineRunTimeConfig runTime, IngestPipeline java) {
+        Optional<IngestRunTimeConfig.PipelineRunTimeConfig> config = Optional.ofNullable(runTime);
+        Optional<IngestRunTimeConfig.PipelineRunTimeConfig.SourceRunTimeConfig> configured = config.map(c -> c.source());
+        Source source = java == null ? null : java.source();
+        return new PipelineSpec(name,
+                source != null ? source.directory() : configured.flatMap(s -> s.directory()).orElse(null),
+                source != null ? source.uri() : Optional.ofNullable(buildTime).flatMap(b -> b.source().uri()).orElse(null),
+                source != null ? source.isRecursive() : configured.map(s -> s.recursive()).orElse(true),
+                source != null ? source.documentId() : configured.flatMap(s -> s.documentId()).orElse(null),
+                source != null ? source.idempotentRepository()
+                        : configured.flatMap(s -> s.idempotentRepository()).orElse(null),
+                source != null ? source.isIdempotentRepositoryAutoCreate()
+                        : configured.map(s -> s.idempotentRepositoryAutoCreate()).orElse(false),
+                buildTime == null ? null : IngestParser.fromLabel(buildTime.parser().orElse(null)),
+                buildTime != null && "media".equals(buildTime.modality()),
+                config.flatMap(c -> c.contentType()).orElse(null),
+                onePlace(name, java == null ? null : java.maxSegmentSize(),
+                        config.flatMap(c -> c.maxSegmentSize()).orElse(null), "splitter", "max-segment-size"),
+                onePlace(name, java == null ? null : java.maxOverlapSize(),
+                        config.flatMap(c -> c.maxOverlapSize()).orElse(null), "splitter", "max-overlap-size"),
+                config.map(c -> c.embeddingBatchSize()).orElse(null),
+                config.map(c -> c.maxDocumentSize()).orElse(0),
+                config.flatMap(c -> c.documentSplitter()).orElse(null),
+                onePlace(name, java == null ? null : java.embeddingStoreName(),
+                        config.flatMap(c -> c.embeddingStore()).orElse(null), "embeddingStore", "embedding-store"),
+                onePlace(name, java == null ? null : java.embeddingModelName(),
+                        config.flatMap(c -> c.embeddingModel()).orElse(null), "embeddingModel", "embedding-model"),
+                config.map(c -> Filters.of(c.filter())).orElse(Filters.NONE));
+    }
+
+    /** A deprecated builder setter still fills its property, unless the configuration sets it too. */
+    private static <T> T onePlace(String name, T fromJava, T fromConfig, String setter, String key) {
+        if (fromJava != null && fromConfig != null) {
+            throw new IllegalArgumentException("Ingestion pipeline '" + name + "' sets " + key + " twice: through the"
+                    + " deprecated IngestPipeline." + setter + "() in its @Ingest method and in quarkus.camel.langchain4j"
+                    + ".ingest." + name + "." + key + ". Keep the configuration property.");
+        }
+        return fromJava != null ? fromJava : fromConfig;
     }
 
     /** The {@code filter.*} options, forwarded to the sink Kamelet and enforced by the component. */
