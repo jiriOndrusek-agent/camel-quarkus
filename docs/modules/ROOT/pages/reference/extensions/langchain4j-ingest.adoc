@@ -180,7 +180,7 @@ It needs the `camel-quarkus-docling` extension and the instance's address in `ca
 
 A missing parser extension fails the build naming the artifact, the same way a missing consumer component does.
 A consumer-fed pipeline parses the same way — the payload the consumer delivers goes to the parser first.
-With a parser, `max-document-size` also rejects a raw payload larger than the cap (in bytes) before it reaches the parser, on top of capping the extracted text (in characters).
+With a parser, `max-document-size` also goes to the parser action Kamelet, which rejects a raw payload larger than the cap (in bytes) before the parse, on top of the cap on the extracted text (in characters).
 
 [id="extensions-langchain4j-ingest-usage-ingesting-media-images-audio-video-and-pdf"]
 === Ingesting media: images, audio, video and PDF
@@ -440,7 +440,8 @@ a| [[quarkus-camel-langchain4j-ingest-pipeline-name-max-document-size]]`link:#qu
 Maximum size of one document in characters, applied to the text about to be split;
 0, the default, means no limit. The pipeline holds a document in memory whole, so the
 cap is the protection against oversized — on a consumer-fed pipeline, attacker-sized —
-payloads. An oversized document fails the exchange cleanly.
+payloads. An oversized document fails the exchange cleanly. With a `parser`, the raw
+payload is capped too, in bytes, before the parse.
 | `int`
 | `0`
 

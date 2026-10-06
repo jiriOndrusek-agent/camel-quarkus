@@ -128,7 +128,7 @@ It needs the `camel-quarkus-docling` extension and the instance's address in `ca
 
 A missing parser extension fails the build naming the artifact, the same way a missing consumer component does.
 A consumer-fed pipeline parses the same way — the payload the consumer delivers goes to the parser first.
-With a parser, `max-document-size` also rejects a raw payload larger than the cap (in bytes) before it reaches the parser, on top of capping the extracted text (in characters).
+With a parser, `max-document-size` also goes to the parser action Kamelet, which rejects a raw payload larger than the cap (in bytes) before the parse, on top of the cap on the extracted text (in characters).
 
 === Ingesting media: images, audio, video and PDF
 

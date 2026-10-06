@@ -16,12 +16,9 @@
  */
 package org.apache.camel.quarkus.component.langchain4j.ingest;
 
-import java.io.InputStream;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
 import org.apache.camel.component.langchain4j.ingest.IngestResult;
 import org.apache.camel.component.langchain4j.ingest.LangChain4jIngestHeaders;
 import org.apache.camel.model.ProcessorDefinition;
@@ -60,10 +57,17 @@ final class IngestCompositionSupport {
         return source;
     }
 
-    /** The parser action Kamelet's parameters. */
+    /**
+     * The parser action Kamelet's parameters. The sink's {@code maxDocumentSize} counts the
+     * extracted text, which protects the splitter and the model but not the parse, so the action
+     * rejects the raw payload first, in bytes, before tika or docling materialize it.
+     */
     static Map<String, Object> actionParameters(PipelineSpec spec) {
         Map<String, Object> action = new LinkedHashMap<>();
         action.put("documentIdHeader", documentIdHeader(spec));
+        if (spec.maxDocumentSize() > 0) {
+            action.put("maxDocumentSize", String.valueOf(spec.maxDocumentSize()));
+        }
         return action;
     }
 
@@ -150,8 +154,8 @@ final class IngestCompositionSupport {
     }
 
     /**
-     * The optional parse stage: the raw-size guard, then the parser action Kamelet, which
-     * captures the document id into the exchange property before the parse. The route is
+     * The optional parse stage: the id guard, then the parser action Kamelet, which caps the raw
+     * payload and captures the document id into the exchange property before the parse. The route is
      * returned unchanged when the pipeline has no parser. A directory pipeline passes no register:
      * its file source already filtered duplicates out.
      */
@@ -163,7 +167,6 @@ final class IngestCompositionSupport {
         }
         String name = spec.name();
         String documentIdHeader = documentIdHeader(spec);
-        int maxDocumentSize = spec.maxDocumentSize();
         // a parser must never run without a captured id: the header the action reads would be
         // absent, and headers written by a parsed document could take its place - the previous
         // engine failed such a delivery, and so does this guard
@@ -187,55 +190,7 @@ final class IngestCompositionSupport {
                     .stop()
                     .end();
         }
-        if (maxDocumentSize > 0) {
-            // the endpoint's own cap counts extracted characters, which protects the splitter and
-            // the model but not the parse: this guard rejects the raw payload first, before tika
-            // or docling materialize it
-            route = route.process(rawSizeGuard(name, maxDocumentSize, spec.directory() != null, documentIdHeader));
-        }
         return route.to(kameletUri(parser.actionKamelet(), actionParameters(spec)));
-    }
-
-    private static Processor rawSizeGuard(String name, int maxDocumentSize, boolean trustDeclaredLength,
-            String documentIdHeader) {
-        // the declared-length header spares even the read, but only the directory pipeline's own
-        // file consumer is trusted to have set it: on a consumer pipeline every header may be
-        // attacker-supplied along with the payload, so its body is always measured - a forged
-        // CamelFileLength must not talk an oversized payload past the guard and into the parser
-        return exchange -> {
-            Long declared = trustDeclaredLength
-                    ? exchange.getMessage().getHeader(Exchange.FILE_LENGTH, Long.class)
-                    : null;
-            long size;
-            byte[] bounded = null;
-            if (declared != null) {
-                size = declared;
-            } else {
-                // every body is measured through a stream - a GenericFile streams from disk, a
-                // byte[] merely wraps - so an attacker-sized payload is rejected after
-                // maxDocumentSize + 1 bytes instead of being materialized whole in the heap just
-                // to be measured; an accepted stream is consumed here, so the bytes replace it
-                // as the body. A null body carries no bytes to guard; it flows on and becomes
-                // the EMPTY outcome
-                InputStream stream = exchange.getMessage().getBody(InputStream.class);
-                if (stream == null) {
-                    size = 0;
-                } else {
-                    int limit = maxDocumentSize == Integer.MAX_VALUE ? Integer.MAX_VALUE : maxDocumentSize + 1;
-                    bounded = stream.readNBytes(limit);
-                    size = bounded.length;
-                }
-            }
-            if (size > maxDocumentSize) {
-                throw new IllegalArgumentException(
-                        "Ingestion pipeline '" + name + "': document '"
-                                + exchange.getMessage().getHeader(documentIdHeader, String.class)
-                                + "' exceeds maxDocumentSize (" + size + " > " + maxDocumentSize + " bytes)");
-            }
-            if (bounded != null) {
-                exchange.getMessage().setBody(bounded);
-            }
-        };
     }
 
     /**

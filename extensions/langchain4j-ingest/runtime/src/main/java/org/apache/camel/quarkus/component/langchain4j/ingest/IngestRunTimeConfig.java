@@ -100,7 +100,8 @@ public interface IngestRunTimeConfig {
          * Maximum size of one document in characters, applied to the text about to be split;
          * 0, the default, means no limit. The pipeline holds a document in memory whole, so the
          * cap is the protection against oversized — on a consumer-fed pipeline, attacker-sized —
-         * payloads. An oversized document fails the exchange cleanly.
+         * payloads. An oversized document fails the exchange cleanly. With a `parser`, the raw
+         * payload is capped too, in bytes, before the parse.
          */
         @WithDefault("0")
         int maxDocumentSize();
