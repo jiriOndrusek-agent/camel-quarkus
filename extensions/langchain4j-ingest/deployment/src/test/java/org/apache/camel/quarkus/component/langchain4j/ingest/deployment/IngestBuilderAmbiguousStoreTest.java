@@ -16,8 +16,14 @@
  */
 package org.apache.camel.quarkus.component.langchain4j.ingest.deployment;
 
+import dev.langchain4j.data.segment.TextSegment;
+import dev.langchain4j.store.embedding.EmbeddingStore;
+import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 import io.quarkus.test.QuarkusExtensionTest;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import org.apache.camel.quarkus.component.langchain4j.ingest.Ingest;
 import org.apache.camel.quarkus.component.langchain4j.ingest.IngestPipeline;
 import org.apache.camel.quarkus.component.langchain4j.ingest.Source;
@@ -26,27 +32,40 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /**
- * A private {@code @Ingest} method would be invoked against the ArC client proxy, whose injected
- * fields are null — so the build rejects it instead of letting it misbehave at startup.
+ * With two store beans, a Java-declared pipeline must name one, and the message names the
+ * configuration key: it applies to {@code @Ingest} pipelines as to configured ones.
  */
-class IngestBuilderPrivateMethodTest {
+class IngestBuilderAmbiguousStoreTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
-            .withApplicationRoot(jar -> jar.addClasses(Pipelines.class))
-            .assertException(t -> ValidationTestSupport.assertFailure(t, "must not be private or static"));
+            .withApplicationRoot(jar -> jar.addClasses(TestEmbeddingBeans.class, OtherStore.class, Pipelines.class))
+            .assertException(t -> ValidationTestSupport.assertFailure(t,
+                    "Ingestion pipeline 'docs' found 2 embedding store beans",
+                    "Name the one to use with quarkus.camel.langchain4j.ingest.docs.embedding-store"));
 
     @Test
-    void buildMustFail() {
-        Assertions.fail("The build was expected to fail");
+    void startMustFail() {
+        Assertions.fail("The application start was expected to fail");
+    }
+
+    @ApplicationScoped
+    public static class OtherStore {
+
+        @Produces
+        @Singleton
+        @Named("other-store")
+        EmbeddingStore<TextSegment> store() {
+            return new InMemoryEmbeddingStore<>();
+        }
     }
 
     @ApplicationScoped
     public static class Pipelines {
 
-        @Ingest("private-docs")
-        private IngestPipeline privateDocs() {
-            return IngestPipeline.from(Source.file("target/private-docs"));
+        @Ingest("docs")
+        IngestPipeline docs() {
+            return IngestPipeline.from(Source.file("target/ambiguous-store"));
         }
     }
 }

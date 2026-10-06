@@ -23,7 +23,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-/** The builder path rejects the same splitter bounds the configuration path rejects at build time. */
+/** The deprecated builder splitter still rejects invalid bounds when called, as released. */
+@SuppressWarnings("removal")
 class IngestPipelineSplitterBoundsTest {
 
     @Test

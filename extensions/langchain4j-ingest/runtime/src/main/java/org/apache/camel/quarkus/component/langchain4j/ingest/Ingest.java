@@ -21,27 +21,31 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import jakarta.inject.Qualifier;
+
 /**
- * Declares an ingestion pipeline in Java, type-safe and IDE-assisted — the same model as the
- * {@code quarkus.camel.langchain4j.ingest.*} configuration:
+ * Declares the source of an ingestion pipeline in Java, type-safe and IDE-assisted:
  *
  * <pre>
  * &#64;Ingest("products")
  * IngestPipeline productDocs() {
  *     return IngestPipeline.from(Source.endpoint(dsl -&gt; dsl.aws2S3("product-docs").region("eu-west-1").deleteAfterRead(false))
- *             .documentId("CamelAwsS3Key"))
- *             .embeddingStore("products");
+ *             .documentId("CamelAwsS3Key"));
  * }
  * </pre>
  *
  * Typing {@code dsl.} lists a factory for every Camel component — {@code aws2S3}, {@code kafka},
  * {@code ftp} and some 300 more — so a source is written with the component's own typed options
- * rather than a URI string, and with nothing to import.
+ * rather than a URI string, and with nothing to import. Every other property of the pipeline is
+ * configuration, {@code quarkus.camel.langchain4j.ingest.products.*}, as for a configured one.
  *
- * The annotated method must be declared on a CDI bean, return {@link IngestPipeline}, take no
- * parameters and be side-effect free: it runs exactly once, at startup. Pipeline names must not
- * collide with configuration-declared pipelines.
+ * {@code @Ingest} is a CDI qualifier, so the method is a producer method of {@link IngestPipeline}
+ * without {@code @Produces} (Quarkus' {@code quarkus.arc.auto-producer-methods}, on by default;
+ * add {@code @Produces} when it is off). Its parameters are injection points. It runs once at
+ * startup, never for a pipeline switched off with {@code enabled=false}. Pipeline names must be
+ * unique, and configuration must not set a {@code source.*} property for them.
  */
+@Qualifier
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface Ingest {

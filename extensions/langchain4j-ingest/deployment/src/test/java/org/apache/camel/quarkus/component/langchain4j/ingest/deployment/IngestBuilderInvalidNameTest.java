@@ -26,20 +26,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /**
- * The race this extension must win: a {@code camel.component.<scheme>.*} property referencing a
- * missing component makes Camel Main's property auto-configuration fail with its bare classpath
- * message before any route builder runs. The pre-start task gets there first, so the user reads
- * the artifact hint, not the race's loser.
+ * A pipeline name is substituted into the sink Kamelet's endpoint URI and into registry
+ * references, so a Java-declared one is held to the same charset as a configured one.
  */
-class IngestMissingComponentWithComponentPropertyTest {
+class IngestBuilderInvalidNameTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
-            .withApplicationRoot(jar -> jar.addClasses(Pipelines.class, TestEmbeddingBeans.class))
-            .overrideConfigKey("camel.component.direct.block", "false")
+            .withApplicationRoot(jar -> jar.addClasses(TestEmbeddingBeans.class, Pipelines.class))
             .assertException(t -> ValidationTestSupport.assertFailure(t,
-                    "component 'direct' is not on the classpath",
-                    "org.apache.camel.quarkus:camel-quarkus-direct"));
+                    "Ingestion pipeline name 'docs/en' may only contain letters, digits"));
 
     @Test
     void startMustFail() {
@@ -49,9 +45,9 @@ class IngestMissingComponentWithComponentPropertyTest {
     @ApplicationScoped
     public static class Pipelines {
 
-        @Ingest("docs")
+        @Ingest("docs/en")
         IngestPipeline docs() {
-            return IngestPipeline.from(Source.endpoint("direct:feed"));
+            return IngestPipeline.from(Source.file("target/invalid-name"));
         }
     }
 }

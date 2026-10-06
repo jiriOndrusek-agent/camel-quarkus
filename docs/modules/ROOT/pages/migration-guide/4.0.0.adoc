@@ -18,3 +18,15 @@ A consumer-fed delivery whose document id resolves to nothing still fails the ex
 Code matching on the message text must be adjusted; matching on the exception type is unaffected.
 
 The default document-id header on consumer-fed pipelines remains `CamelIngestDocumentId` as released — the extension pins it over the component's own `CamelLangChain4jIngestDocumentId` default — so routes that set the header keep working unchanged.
+
+=== `@Ingest` pipelines take their settings from configuration
+
+An `@Ingest` method now declares only the pipeline's source; every other setting is a `quarkus.camel.langchain4j.ingest.<pipeline-name>.*` property, for `@Ingest` pipelines as for configured ones.
+`IngestPipeline.embeddingStore()`, `embeddingModel()` and `splitter()` are deprecated and still work, but setting the same property in configuration as well fails the start: move them to `embedding-store`, `embedding-model`, `max-segment-size` and `max-overlap-size`.
+A `source.uri` for an `@Ingest` pipeline's name now fails the build, and `source.*` runtime properties still fail the start.
+
+These four properties are now runtime configuration and can change without a rebuild; only `source.uri`, `parser` and `modality` stay fixed at build time.
+Their bounds are checked at startup by the `camel-langchain4j-ingest` component, whose messages name its endpoint options, such as `maxSegmentSize`.
+
+`@Ingest` methods are CDI producer methods now, so existing methods keep working unchanged and may take injected parameters.
+An application that sets `quarkus.arc.auto-producer-methods=false` must annotate them with `@Produces`; the build tells it so.

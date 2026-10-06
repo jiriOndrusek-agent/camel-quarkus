@@ -26,21 +26,22 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /**
- * A builder-declared parser is composed at startup, out of reach of the build-time check — so a
- * missing parser component must fail in the pre-start task with the same artifact hint.
+ * The parser of an {@code @Ingest} pipeline is configuration like any other pipeline's, so a
+ * missing parser component fails the build with the same artifact hint.
  */
 class IngestBuilderParserMissingComponentTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
             .withApplicationRoot(jar -> jar.addClasses(Pipelines.class, TestEmbeddingBeans.class))
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.parser", "tika")
             .assertException(t -> ValidationTestSupport.assertFailure(t,
                     "parses with 'tika'", "component 'tika' is not on the classpath",
                     "org.apache.camel.quarkus:camel-quarkus-tika"));
 
     @Test
-    void startMustFail() {
-        Assertions.fail("The application start was expected to fail");
+    void buildMustFail() {
+        Assertions.fail("The build was expected to fail");
     }
 
     @ApplicationScoped
@@ -48,10 +49,7 @@ class IngestBuilderParserMissingComponentTest {
 
         @Ingest("docs")
         IngestPipeline docs() {
-            return IngestPipeline.from(Source.file("target/parser-docs"))
-                    .parser("tika")
-                    .embeddingStore("store")
-                    .embeddingModel("model");
+            return IngestPipeline.from(Source.file("target/parser-docs"));
         }
     }
 }

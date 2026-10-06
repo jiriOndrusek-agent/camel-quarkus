@@ -21,20 +21,20 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-/** Splitter bounds are validated at build time on the configuration path. */
+/** Splitter bounds are forwarded to the component, which rejects them at startup. */
 class IngestSplitterBoundsConfigTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
-            .withApplicationRoot(jar -> {
-            })
+            .withApplicationRoot(jar -> jar.addClasses(TestEmbeddingBeans.class))
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.source.directory", "target/splitter-bounds")
             .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.max-segment-size", "100")
             .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.max-overlap-size", "100")
             .assertException(t -> ValidationTestSupport.assertFailure(t,
-                    "max-segment-size must be positive and max-overlap-size must be smaller"));
+                    "Ingestion pipeline 'docs': maxSegmentSize must be positive and maxOverlapSize must be non-negative and smaller than it (got 100 / 100)"));
 
     @Test
-    void buildMustFail() {
-        Assertions.fail("The build was expected to fail");
+    void startMustFail() {
+        Assertions.fail("The application start was expected to fail");
     }
 }

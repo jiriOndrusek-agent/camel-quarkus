@@ -25,14 +25,18 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-/** A pipeline declared both in configuration and through {@code @Ingest} fails the build. */
-class IngestDuplicatePipelineNameTest {
+/**
+ * With ArC's auto producer methods switched off, an {@code @Ingest} method without
+ * {@code @Produces} would declare nothing, so it fails the build instead.
+ */
+class IngestWithoutAutoProducerMethodsTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
             .withApplicationRoot(jar -> jar.addClasses(Pipelines.class))
-            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.embedding-store", "store")
-            .assertException(t -> ValidationTestSupport.assertFailure(t, "declared more than once"));
+            .overrideConfigKey("quarkus.arc.auto-producer-methods", "false")
+            .assertException(t -> ValidationTestSupport.assertFailure(t,
+                    "is not a producer method", "annotate it with @Produces"));
 
     @Test
     void buildMustFail() {

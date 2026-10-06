@@ -16,7 +16,6 @@
  */
 package org.apache.camel.quarkus.component.langchain4j.ingest;
 
-import java.util.Optional;
 import java.util.function.Function;
 
 import org.apache.camel.builder.EndpointConsumerBuilder;
@@ -45,7 +44,6 @@ public final class Source {
     private static final EndpointBuilderFactory DSL = new EndpointBuilderFactory() {
     };
 
-    private final String type;
     private String directory;
     private String uri;
     private String documentId;
@@ -53,19 +51,18 @@ public final class Source {
     private boolean idempotentRepositoryAutoCreate;
     private boolean recursive = true;
 
-    private Source(String type) {
-        this.type = type;
+    private Source() {
     }
 
     public static Source file(String directory) {
-        Source source = new Source("file");
+        Source source = new Source();
         source.directory = requireText(directory, "directory");
         return source;
     }
 
     /** A raw consumer URI. Prefer {@link #endpoint(org.apache.camel.builder.EndpointConsumerBuilder)}. */
     public static Source endpoint(String uri) {
-        Source source = new Source("endpoint");
+        Source source = new Source();
         source.uri = requireText(uri, "uri");
         return source;
     }
@@ -131,42 +128,27 @@ public final class Source {
         return value;
     }
 
-    String type() {
-        return type;
-    }
-
     String uri() {
         return uri;
     }
 
-    /** The configuration view, so builder pipelines reuse every configuration path verbatim. */
-    IngestRunTimeConfig.PipelineRunTimeConfig.SourceRunTimeConfig asRunTimeConfig() {
-        return new IngestRunTimeConfig.PipelineRunTimeConfig.SourceRunTimeConfig() {
+    String directory() {
+        return directory;
+    }
 
-            @Override
-            public Optional<String> directory() {
-                return Optional.ofNullable(directory);
-            }
+    boolean isRecursive() {
+        return recursive;
+    }
 
-            @Override
-            public boolean recursive() {
-                return recursive;
-            }
+    String documentId() {
+        return documentId;
+    }
 
-            @Override
-            public Optional<String> documentId() {
-                return Optional.ofNullable(documentId);
-            }
+    String idempotentRepository() {
+        return idempotentRepository;
+    }
 
-            @Override
-            public Optional<String> idempotentRepository() {
-                return Optional.ofNullable(idempotentRepository);
-            }
-
-            @Override
-            public boolean idempotentRepositoryAutoCreate() {
-                return idempotentRepositoryAutoCreate;
-            }
-        };
+    boolean isIdempotentRepositoryAutoCreate() {
+        return idempotentRepositoryAutoCreate;
     }
 }

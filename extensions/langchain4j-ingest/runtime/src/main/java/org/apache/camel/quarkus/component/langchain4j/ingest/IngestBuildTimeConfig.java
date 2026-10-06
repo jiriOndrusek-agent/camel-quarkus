@@ -27,24 +27,13 @@ import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithParentName;
 
 /**
- * The shape of an ingestion pipeline: what it reads and where it writes. Locations that differ
- * per deployment are runtime configuration, see {@link IngestRunTimeConfig}.
+ * What is fixed at build time: the consumer URI, the parser and the modality, which decide the
+ * route's shape and the extensions the build checks for. Everything else, for every pipeline, is
+ * runtime configuration, see {@link IngestRunTimeConfig}.
  */
 @ConfigMapping(prefix = "quarkus.camel.langchain4j.ingest")
 @ConfigRoot(phase = ConfigPhase.BUILD_AND_RUN_TIME_FIXED)
 public interface IngestBuildTimeConfig {
-
-    /** Mirrors the {@code @WithDefault} below, which can only carry a literal. */
-    int DEFAULT_MAX_SEGMENT_SIZE = 500;
-
-    /** Mirrors the {@code @WithDefault} below, which can only carry a literal. */
-    int DEFAULT_MAX_OVERLAP_SIZE = 50;
-
-    /** Mirrors the {@code @WithDefault} below, which can only carry a literal. */
-    int DEFAULT_EMBEDDING_BATCH_SIZE = 32;
-
-    /** Mirrors the {@code @WithDefault} below, which can only carry a literal; 0 means no limit. */
-    int DEFAULT_MAX_DOCUMENT_SIZE = 0;
 
     /**
      * Ingestion pipelines by name.
@@ -71,55 +60,16 @@ public interface IngestBuildTimeConfig {
         Optional<String> parser();
 
         /**
-         * Name of the `EmbeddingStore` bean to write to. When not set, the only one present is
-         * used.
+         * What the consumed payload is. `text`, the default, is read as a String, split into
+         * segments and embedded segment by segment. `media` is read as bytes and embedded whole,
+         * as one vector: audio, an image, video or a PDF, told apart by the MIME type, each
+         * needing an embedding model that declares the matching content type — the pipeline
+         * fails to start with a text-only model. In media mode `parser` and `document-splitter`
+         * must not be set, the splitter sizes and `embedding-batch-size` do not apply, and
+         * `max-document-size` and `filter.min-document-size` count bytes.
          */
-        Optional<String> embeddingStore();
-
-        /**
-         * Name of the `EmbeddingModel` bean to embed with. When not set, the only one present is
-         * used.
-         */
-        Optional<String> embeddingModel();
-
-        /**
-         * Maximum size of one segment, in characters.
-         */
-        @WithDefault("500")
-        int maxSegmentSize();
-
-        /**
-         * How much of the previous segment each segment repeats, in characters. Overlap keeps a
-         * sentence split across a boundary retrievable from either side.
-         */
-        @WithDefault("50")
-        int maxOverlapSize();
-
-        /**
-         * How many segments are embedded per request to the embedding model. Providers with
-         * generous per-request limits ingest large documents faster with a bigger batch; a batch
-         * carries at most `embedding-batch-size` × `max-segment-size` characters, so tune the two
-         * together against the provider's token limits.
-         */
-        @WithDefault("32")
-        int embeddingBatchSize();
-
-        /**
-         * Maximum size of one document in characters, applied to the text about to be split;
-         * 0, the default, means no limit. The pipeline holds a document in memory whole, so the
-         * cap is the protection against oversized — on a consumer-fed pipeline, attacker-sized —
-         * payloads. An oversized document fails the exchange cleanly.
-         */
-        @WithDefault("0")
-        int maxDocumentSize();
-
-        /**
-         * Name of the `DocumentSplitter` bean replacing the default recursive splitting;
-         * `max-segment-size` and `max-overlap-size` are then ignored. Looked up by name only —
-         * an application may hold unrelated splitters. Segments returned without the identity
-         * metadata are re-stamped, so a custom splitter cannot break citation.
-         */
-        Optional<String> documentSplitter();
+        @WithDefault("text")
+        String modality();
 
         /**
          * A pipeline reads either a directory or a Camel consumer, and the two halves of that
@@ -137,6 +87,7 @@ public interface IngestBuildTimeConfig {
              * property instead. Fixed at build time by design — a runtime-overridable consumer
              * URI would be arbitrary component invocation. Property placeholders inside it still
              * resolve at startup, so credentials and endpoints remain runtime configuration.
+             * An `@Ingest` pipeline takes its source from the method, so this is rejected for it.
              */
             Optional<String> uri();
         }

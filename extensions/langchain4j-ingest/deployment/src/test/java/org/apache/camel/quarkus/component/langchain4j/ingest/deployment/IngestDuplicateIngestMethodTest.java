@@ -25,13 +25,14 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-/** An {@code @Ingest} method taking parameters fails the build. */
-class IngestBuilderMethodParametersTest {
+/** Two {@code @Ingest} methods sharing a name fail the build; to CDI they are just two beans. */
+class IngestDuplicateIngestMethodTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
             .withApplicationRoot(jar -> jar.addClasses(Pipelines.class))
-            .assertException(t -> ValidationTestSupport.assertFailure(t, "must take no parameters"));
+            .assertException(t -> ValidationTestSupport.assertFailure(t,
+                    "Ingestion pipeline 'docs' is declared more than once"));
 
     @Test
     void buildMustFail() {
@@ -41,9 +42,14 @@ class IngestBuilderMethodParametersTest {
     @ApplicationScoped
     public static class Pipelines {
 
-        @Ingest("with-params")
-        IngestPipeline withParams(String directory) {
-            return IngestPipeline.from(Source.file(directory));
+        @Ingest("docs")
+        IngestPipeline docs() {
+            return IngestPipeline.from(Source.file("target/docs"));
+        }
+
+        @Ingest("docs")
+        IngestPipeline moreDocs() {
+            return IngestPipeline.from(Source.file("target/more-docs"));
         }
     }
 }

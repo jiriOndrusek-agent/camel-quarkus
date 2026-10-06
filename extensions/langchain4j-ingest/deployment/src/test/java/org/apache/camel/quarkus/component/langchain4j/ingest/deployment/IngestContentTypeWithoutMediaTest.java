@@ -17,38 +17,23 @@
 package org.apache.camel.quarkus.component.langchain4j.ingest.deployment;
 
 import io.quarkus.test.QuarkusExtensionTest;
-import jakarta.enterprise.context.ApplicationScoped;
-import org.apache.camel.quarkus.component.langchain4j.ingest.Ingest;
-import org.apache.camel.quarkus.component.langchain4j.ingest.IngestPipeline;
-import org.apache.camel.quarkus.component.langchain4j.ingest.Source;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-/**
- * A final {@code @Ingest} method cannot be overridden by the ArC client proxy, so on a
- * normal-scoped bean it would silently run against the proxy's null fields — the same failure a
- * private method causes, and it gets the same build-time rejection.
- */
-class IngestBuilderFinalMethodTest {
+/** A content type types a media payload: the component rejects one set without modality media at startup. */
+class IngestContentTypeWithoutMediaTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
-            .withApplicationRoot(jar -> jar.addClasses(Pipelines.class))
+            .withApplicationRoot(jar -> jar.addClasses(TestEmbeddingBeans.class))
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.source.directory", "target/content-type")
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.content-type", "image/png")
             .assertException(t -> ValidationTestSupport.assertFailure(t,
-                    "must not be final, nor declared on a final class"));
+                    "Ingestion pipeline 'docs': contentType only applies to modality=media (got 'image/png')"));
 
     @Test
-    void buildMustFail() {
-        Assertions.fail("The build was expected to fail");
-    }
-
-    @ApplicationScoped
-    public static class Pipelines {
-
-        @Ingest("final-docs")
-        final IngestPipeline finalDocs() {
-            return IngestPipeline.from(Source.file("target/final-docs"));
-        }
+    void startMustFail() {
+        Assertions.fail("The application start was expected to fail");
     }
 }

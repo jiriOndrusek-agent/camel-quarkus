@@ -16,27 +16,24 @@
  */
 package org.apache.camel.quarkus.component.langchain4j.ingest.deployment;
 
-import org.apache.camel.quarkus.component.langchain4j.ingest.IngestPipeline;
-import org.apache.camel.quarkus.component.langchain4j.ingest.Source;
+import io.quarkus.test.QuarkusExtensionTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-/** The builder rejects an unsupported parser eagerly, like the configuration path at build time. */
-class IngestPipelineParserValidationTest {
+/** A modality value outside the supported set stops the build naming the alternatives. */
+class IngestUnknownModalityTest {
+
+    @RegisterExtension
+    static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
+            .withApplicationRoot(jar -> {
+            })
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.modality", "video")
+            .assertException(t -> ValidationTestSupport.assertFailure(t,
+                    "sets modality 'video'", "Supported modalities: media, text"));
 
     @Test
-    void unknownParserRejected() {
-        IngestPipeline pipeline = IngestPipeline.from(Source.file("target/docs"));
-        IllegalArgumentException e = Assertions.assertThrows(IllegalArgumentException.class,
-                () -> pipeline.parser("pdfmagic"));
-        Assertions.assertTrue(e.getMessage().contains("parser must be one of"), e.getMessage());
-        Assertions.assertTrue(e.getMessage().contains("pdfmagic"), e.getMessage());
-    }
-
-    @Test
-    void supportedParsersAccepted() {
-        for (String parser : IngestPipeline.SUPPORTED_PARSERS) {
-            IngestPipeline.from(Source.file("target/docs")).parser(parser);
-        }
+    void buildMustFail() {
+        Assertions.fail("The build was expected to fail");
     }
 }

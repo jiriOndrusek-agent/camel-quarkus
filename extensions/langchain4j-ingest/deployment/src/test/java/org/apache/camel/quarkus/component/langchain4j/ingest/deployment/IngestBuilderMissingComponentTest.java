@@ -49,9 +49,7 @@ class IngestBuilderMissingComponentTest {
 
         @Ingest("docs")
         IngestPipeline docs() {
-            return IngestPipeline.from(Source.endpoint("direct:feed"))
-                    .embeddingStore("store")
-                    .embeddingModel("model");
+            return IngestPipeline.from(Source.endpoint("direct:feed"));
         }
     }
 }

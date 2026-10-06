@@ -26,24 +26,22 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /**
- * The race this extension must win: a {@code camel.component.<scheme>.*} property referencing a
- * missing component makes Camel Main's property auto-configuration fail with its bare classpath
- * message before any route builder runs. The pre-start task gets there first, so the user reads
- * the artifact hint, not the race's loser.
+ * Configuration owns every property of an {@code @Ingest} pipeline but its source: a
+ * {@code source.uri} for the same name would be a second source, so it fails the build.
  */
-class IngestMissingComponentWithComponentPropertyTest {
+class IngestBuilderConfigUriOverrideTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
-            .withApplicationRoot(jar -> jar.addClasses(Pipelines.class, TestEmbeddingBeans.class))
-            .overrideConfigKey("camel.component.direct.block", "false")
+            .withApplicationRoot(jar -> jar.addClasses(Pipelines.class))
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.source.uri", "file:target/feed-uri")
             .assertException(t -> ValidationTestSupport.assertFailure(t,
-                    "component 'direct' is not on the classpath",
-                    "org.apache.camel.quarkus:camel-quarkus-direct"));
+                    "Ingestion pipeline 'docs' is declared in Java",
+                    "Remove quarkus.camel.langchain4j.ingest.docs.source.uri"));
 
     @Test
-    void startMustFail() {
-        Assertions.fail("The application start was expected to fail");
+    void buildMustFail() {
+        Assertions.fail("The build was expected to fail");
     }
 
     @ApplicationScoped
@@ -51,7 +49,7 @@ class IngestMissingComponentWithComponentPropertyTest {
 
         @Ingest("docs")
         IngestPipeline docs() {
-            return IngestPipeline.from(Source.endpoint("direct:feed"));
+            return IngestPipeline.from(Source.file("target/docs"));
         }
     }
 }

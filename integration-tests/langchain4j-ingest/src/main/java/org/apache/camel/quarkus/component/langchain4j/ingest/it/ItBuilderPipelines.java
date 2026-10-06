@@ -27,9 +27,11 @@ import static org.apache.camel.builder.endpoint.StaticEndpointBuilders.kafka;
 
 /**
  * Pipelines declared in Java through the Camel Endpoint DSL: no URI strings anywhere, so every
- * connector option is typed and the compiler checks it. Each of these can still be switched off
- * through {@code quarkus.camel.langchain4j.ingest.<name>.enabled}, which is how the tests that need no
- * broker or object store keep them out of the way.
+ * connector option is typed and the compiler checks it. The method declares the source;
+ * {@code datasheets} takes everything else from configuration, while {@code s3docs} and
+ * {@code events} still use the deprecated builder setters, which keep working. Each of these can
+ * be switched off through {@code quarkus.camel.langchain4j.ingest.<name>.enabled}, which is how the
+ * tests that need no broker or object store keep them out of the way.
  */
 @ApplicationScoped
 public class ItBuilderPipelines {
@@ -51,10 +53,7 @@ public class ItBuilderPipelines {
         // the auto-created register: named, but no bean is defined anywhere for it
         return IngestPipeline.from(Source.endpoint(direct("datasheets-feed"))
                 .idempotentRepository("datasheetsRegister")
-                .idempotentRepositoryAutoCreate(true))
-                .embeddingStore("datasheets-store")
-                .embeddingModel("test-model")
-                .splitter(120, 20);
+                .idempotentRepositoryAutoCreate(true));
     }
 
     /**
@@ -62,6 +61,7 @@ public class ItBuilderPipelines {
      * {@code dsl.}. The object key identifies the document, and the store addresses buckets by
      * path.
      */
+    @SuppressWarnings("removal")
     @Ingest("s3docs")
     IngestPipeline s3docs() {
         return IngestPipeline.from(Source.endpoint(dsl -> dsl.aws2S3("ingest-docs")
@@ -80,6 +80,7 @@ public class ItBuilderPipelines {
     }
 
     /** The static-import form of the same DSL; the record key identifies the document. */
+    @SuppressWarnings("removal")
     @Ingest("events")
     IngestPipeline events() {
         return IngestPipeline.from(Source.endpoint(kafka("ingest-events")

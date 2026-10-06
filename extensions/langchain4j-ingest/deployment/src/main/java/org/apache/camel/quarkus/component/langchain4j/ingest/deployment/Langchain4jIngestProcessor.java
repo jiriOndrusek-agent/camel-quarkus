@@ -17,17 +17,16 @@
 package org.apache.camel.quarkus.component.langchain4j.ingest.deployment;
 
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
-import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
+import io.quarkus.arc.deployment.ArcConfig;
 import io.quarkus.arc.deployment.SyntheticBeansRuntimeInitBuildItem;
 import io.quarkus.arc.deployment.ValidationPhaseBuildItem.ValidationErrorBuildItem;
+import io.quarkus.arc.processor.DotNames;
 import io.quarkus.bootstrap.classloading.QuarkusClassLoader;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
@@ -38,15 +37,14 @@ import io.quarkus.deployment.builditem.ApplicationArchivesBuildItem;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ExcludeConfigBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceDirectoryBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedPackageBuildItem;
 import io.quarkus.runtime.configuration.ConfigurationException;
-import jakarta.inject.Singleton;
 import org.apache.camel.quarkus.component.langchain4j.ingest.Ingest;
 import org.apache.camel.quarkus.component.langchain4j.ingest.IngestBuildTimeConfig;
-import org.apache.camel.quarkus.component.langchain4j.ingest.IngestBuilderPipelines;
 import org.apache.camel.quarkus.component.langchain4j.ingest.IngestPipeline;
 import org.apache.camel.quarkus.component.langchain4j.ingest.IngestRoutes;
 import org.apache.camel.quarkus.component.langchain4j.ingest.Langchain4jIngestRecorder;
@@ -57,7 +55,6 @@ import org.apache.camel.quarkus.core.deployment.util.CamelSupport;
 import org.apache.camel.quarkus.core.deployment.util.PathFilter;
 import org.apache.camel.util.URISupport;
 import org.jboss.jandex.AnnotationInstance;
-import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
 
@@ -65,17 +62,37 @@ class Langchain4jIngestProcessor {
 
     private static final String FEATURE = "camel-langchain4j-ingest";
 
+    private static final Set<String> MODALITIES = Set.of("text", "media");
+
     @BuildStep
     FeatureBuildItem feature() {
         return new FeatureBuildItem(FEATURE);
     }
 
+    /**
+     * {@link Ingest} is listed so that it is indexed: the runtime jar carries no Jandex index, and
+     * only an indexed qualifier lets ArC's auto producer methods turn {@code @Ingest} methods into
+     * producers.
+     */
     @BuildStep
     AdditionalBeanBuildItem beans() {
         return AdditionalBeanBuildItem.builder()
-                .addBeanClasses(IngestRoutes.class)
+                .addBeanClasses(IngestRoutes.class, Ingest.class)
                 .setUnremovable()
                 .build();
+    }
+
+    /**
+     * The composition resolves its catalog Kamelets at runtime, so a native image needs their
+     * YAML whatever {@code quarkus.camel.kamelet.identifiers} narrows the kamelet extension to.
+     */
+    @BuildStep
+    NativeImageResourceBuildItem ingestKamelets() {
+        return new NativeImageResourceBuildItem(
+                "kamelets/langchain4j-ingest-file-source.kamelet.yaml",
+                "kamelets/langchain4j-ingest-sink.kamelet.yaml",
+                "kamelets/tika-extract-text-action.kamelet.yaml",
+                "kamelets/docling-convert-action.kamelet.yaml");
     }
 
     /**
@@ -168,95 +185,43 @@ class Langchain4jIngestProcessor {
     }
 
     /**
-     * Discovers {@code @Ingest} builder methods: validated here (return type, no parameters,
-     * unique names, no collision with configuration-declared pipelines), invoked reflectively once
-     * at startup. Violations are reported as {@link ValidationErrorBuildItem}s — the channel every
-     * build-time check of this extension uses, so dev and test mode see them too, and all of them
-     * at once.
+     * {@code @Ingest} methods are CDI producer methods, so ArC validates their shape and IngestRoutes
+     * resolves them; what stays here is what CDI cannot know: a pipeline name is non-blank and unique,
+     * and configuration does not declare a second source for it. Violations are reported as
+     * {@link ValidationErrorBuildItem}s — the channel every build-time check of this extension uses,
+     * so dev and test mode see them too, and all of them at once.
      */
     @BuildStep
-    @Record(ExecutionTime.STATIC_INIT)
-    void discoverBuilderPipelines(
-            CombinedIndexBuildItem combinedIndex,
-            IngestBuildTimeConfig config,
-            Langchain4jIngestRecorder recorder,
-            BuildProducer<AdditionalBeanBuildItem> beans,
-            BuildProducer<ReflectiveClassBuildItem> reflectiveClasses,
-            BuildProducer<SyntheticBeanBuildItem> syntheticBeans,
+    void validateIngestMethods(CombinedIndexBuildItem combinedIndex, IngestBuildTimeConfig config, ArcConfig arcConfig,
             BuildProducer<ValidationErrorBuildItem> validationErrors) {
-
-        DotName ingestAnnotation = DotName.createSimple(Ingest.class.getName());
-        DotName pipelineType = DotName.createSimple(IngestPipeline.class.getName());
-
-        List<String> flatEntries = new ArrayList<>();
         Set<String> names = new HashSet<>();
-        Set<String> beanClasses = new HashSet<>();
-
-        for (AnnotationInstance annotation : combinedIndex.getIndex().getAnnotations(ingestAnnotation)) {
-            if (annotation.target().kind() != AnnotationTarget.Kind.METHOD) {
-                continue;
-            }
+        for (AnnotationInstance annotation : combinedIndex.getIndex()
+                .getAnnotations(DotName.createSimple(Ingest.class.getName()))) {
             MethodInfo method = annotation.target().asMethod();
             String name = annotation.value().asString();
             String location = method.declaringClass().name() + "#" + method.name();
+            IngestBuildTimeConfig.PipelineBuildTimeConfig configured = config.pipelines().get(name);
 
             if (name.isBlank()) {
                 validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
                         "@Ingest on " + location + " has a blank pipeline name")));
-                continue;
-            }
-            if (!method.returnType().name().equals(pipelineType)) {
+            } else if (!names.add(name)) {
                 validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
-                        "@Ingest method " + location + " must return " + IngestPipeline.class.getSimpleName())));
-                continue;
-            }
-            if (!method.parameters().isEmpty()) {
+                        "Ingestion pipeline '" + name + "' is declared more than once. Pipeline names must be unique.")));
+            } else if (configured != null && configured.source().uri().isPresent()) {
+                // configuration owns every other property of an @Ingest pipeline, but not its source
                 validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
-                        "@Ingest method " + location + " must take no parameters")));
-                continue;
+                        "Ingestion pipeline '" + name + "' is declared in Java, so its source comes from the @Ingest"
+                                + " method " + location + ". Remove quarkus.camel.langchain4j.ingest." + name
+                                + ".source.uri, or declare the pipeline in configuration instead.")));
             }
-            // the method is invoked on a CDI bean instance, which a static method would bypass
-            // and a private one would run against the client proxy, seeing null injected fields
-            if (Modifier.isPrivate(method.flags()) || Modifier.isStatic(method.flags())) {
+            // without auto producer methods, an @Ingest method lacking @Produces would declare nothing
+            if (!arcConfig.autoProducerMethods() && !method.hasDeclaredAnnotation(DotNames.PRODUCES)) {
                 validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
-                        "@Ingest method " + location + " must not be private or static")));
-                continue;
+                        "@Ingest method " + location + " is not a producer method: annotate it with @Produces, or"
+                                + " leave quarkus.arc.auto-producer-methods enabled")));
             }
-            // a client proxy can neither override a final method nor extend a final class, so on
-            // a normal-scoped bean the call would silently run against the proxy's null fields
-            if (Modifier.isFinal(method.flags()) || Modifier.isFinal(method.declaringClass().flags())) {
-                validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
-                        "@Ingest method " + location + " must not be final, nor declared on a final class")));
-                continue;
-            }
-            if (!names.add(name) || config.pipelines().containsKey(name)) {
-                validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
-                        "Ingestion pipeline '" + name + "' is declared more than once "
-                                + "(builder and/or configuration). Pipeline names must be unique.")));
-                continue;
-            }
-
-            flatEntries.add(name);
-            flatEntries.add(method.declaringClass().name().toString());
-            flatEntries.add(method.name());
-            beanClasses.add(method.declaringClass().name().toString());
         }
-
-        if (!beanClasses.isEmpty()) {
-            beans.produce(AdditionalBeanBuildItem.builder()
-                    .addBeanClasses(beanClasses.toArray(new String[0]))
-                    .setUnremovable()
-                    .build());
-            reflectiveClasses.produce(ReflectiveClassBuildItem.builder(beanClasses.toArray(new String[0]))
-                    .methods()
-                    .build());
-        }
-
-        syntheticBeans.produce(SyntheticBeanBuildItem.configure(IngestBuilderPipelines.class)
-                .scope(Singleton.class)
-                .unremovable()
-                .runtimeValue(recorder.createBuilderPipelines(flatEntries))
-                .done());
     }
 
     /**
@@ -277,9 +242,9 @@ class Langchain4jIngestProcessor {
     /**
      * A pipeline whose consumer URI names a component that is not on the classpath stops the
      * build, naming the artifact that fixes it rather than failing at startup. The same goes for
-     * the {@code parser} value and its component. Only configured pipelines can be checked: a
-     * builder-declared pipeline composes its URI and parser at startup, where the pre-start
-     * task above applies the same hint. Component services are REGISTRY-destination, so they are
+     * the {@code parser} value and its component, for every pipeline. Only configured URIs can be
+     * checked: an {@code @Ingest} pipeline composes its URI at startup, where the pre-start task
+     * above applies the same hint. Component services are REGISTRY-destination, so they are
      * read from the application archives directly — they never appear among the DISCOVERY
      * {@code CamelServiceBuildItem}s.
      */
@@ -335,31 +300,25 @@ class Langchain4jIngestProcessor {
 
     /**
      * What can be decided from build-time configuration fails here, at build time, with the fix in
-     * the message — never silently at runtime.
+     * the message — never silently at runtime. The runtime properties are checked at startup, their
+     * bounds and media conflicts by the component.
      */
     @BuildStep
     void validatePipelines(IngestBuildTimeConfig config, BuildProducer<ValidationErrorBuildItem> validationErrors) {
         for (Map.Entry<String, IngestBuildTimeConfig.PipelineBuildTimeConfig> entry : config.pipelines().entrySet()) {
             IngestBuildTimeConfig.PipelineBuildTimeConfig pipeline = entry.getValue();
-
-            if (pipeline.maxSegmentSize() <= 0 || pipeline.maxOverlapSize() < 0
-                    || pipeline.maxOverlapSize() >= pipeline.maxSegmentSize()) {
+            String modality = pipeline.modality();
+            if (!MODALITIES.contains(modality)) {
                 validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
-                        "Ingestion pipeline '" + entry.getKey() + "': max-segment-size must be positive and "
-                                + "max-overlap-size must be smaller than it (got " + pipeline.maxSegmentSize()
-                                + " / " + pipeline.maxOverlapSize() + ")")));
-            }
-
-            if (pipeline.embeddingBatchSize() < 1) {
+                        "Ingestion pipeline '" + entry.getKey() + "' sets modality '" + modality
+                                + "'. Supported modalities: "
+                                + MODALITIES.stream().sorted().collect(Collectors.joining(", ")))));
+            } else if ("media".equals(modality) && pipeline.parser().isPresent()) {
+                // a media document is embedded whole: there is nothing to parse
                 validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
-                        "Ingestion pipeline '" + entry.getKey() + "': embedding-batch-size must be positive (got "
-                                + pipeline.embeddingBatchSize() + ")")));
-            }
-
-            if (pipeline.maxDocumentSize() < 0) {
-                validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
-                        "Ingestion pipeline '" + entry.getKey() + "': max-document-size must not be negative, 0 "
-                                + "meaning no limit (got " + pipeline.maxDocumentSize() + ")")));
+                        "Ingestion pipeline '" + entry.getKey() + "' sets modality 'media' together with parser '"
+                                + pipeline.parser().get() + "'. A media document is embedded whole and never"
+                                + " parsed; remove one of them.")));
             }
         }
     }

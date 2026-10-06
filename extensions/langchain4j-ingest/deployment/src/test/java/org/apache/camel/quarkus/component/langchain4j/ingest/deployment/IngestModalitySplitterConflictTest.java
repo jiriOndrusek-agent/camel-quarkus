@@ -16,30 +16,31 @@
  */
 package org.apache.camel.quarkus.component.langchain4j.ingest.deployment;
 
+import dev.langchain4j.data.document.DocumentSplitter;
+import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import io.quarkus.test.QuarkusExtensionTest;
 import jakarta.enterprise.context.ApplicationScoped;
-import org.apache.camel.quarkus.component.langchain4j.ingest.Ingest;
-import org.apache.camel.quarkus.component.langchain4j.ingest.IngestPipeline;
-import org.apache.camel.quarkus.component.langchain4j.ingest.Source;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /**
- * The race this extension must win: a {@code camel.component.<scheme>.*} property referencing a
- * missing component makes Camel Main's property auto-configuration fail with its bare classpath
- * message before any route builder runs. The pre-start task gets there first, so the user reads
- * the artifact hint, not the race's loser.
+ * A media pipeline embeds a document whole, so the component rejects a document splitter beside it
+ * at startup.
  */
-class IngestMissingComponentWithComponentPropertyTest {
+class IngestModalitySplitterConflictTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
-            .withApplicationRoot(jar -> jar.addClasses(Pipelines.class, TestEmbeddingBeans.class))
-            .overrideConfigKey("camel.component.direct.block", "false")
+            .withApplicationRoot(jar -> jar.addClasses(TestEmbeddingBeans.class, Splitters.class))
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.source.directory", "target/media-splitter")
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.modality", "media")
+            .overrideConfigKey("quarkus.camel.langchain4j.ingest.docs.document-splitter", "mySplitter")
             .assertException(t -> ValidationTestSupport.assertFailure(t,
-                    "component 'direct' is not on the classpath",
-                    "org.apache.camel.quarkus:camel-quarkus-direct"));
+                    "Ingestion pipeline 'docs': documentSplitter does not apply to modality=media"));
 
     @Test
     void startMustFail() {
@@ -47,11 +48,13 @@ class IngestMissingComponentWithComponentPropertyTest {
     }
 
     @ApplicationScoped
-    public static class Pipelines {
+    public static class Splitters {
 
-        @Ingest("docs")
-        IngestPipeline docs() {
-            return IngestPipeline.from(Source.endpoint("direct:feed"));
+        @Produces
+        @Singleton
+        @Named("mySplitter")
+        DocumentSplitter splitter() {
+            return DocumentSplitters.recursive(100, 10);
         }
     }
 }
