@@ -65,8 +65,8 @@ public interface IngestBuildTimeConfig {
          * as one vector: audio, an image, video or a PDF, told apart by the MIME type, each
          * needing an embedding model that declares the matching content type — the pipeline
          * fails to start with a text-only model. In media mode `parser` and `document-splitter`
-         * must not be set, the splitter sizes and `embedding-batch-size` do not apply, and `max-document-size` counts
-         * bytes.
+         * must not be set, the splitter sizes and `embedding-batch-size` do not apply, and
+         * `max-document-size` and `filter.min-document-size` count bytes.
          */
         @WithDefault("text")
         String modality();

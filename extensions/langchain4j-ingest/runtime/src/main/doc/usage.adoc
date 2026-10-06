@@ -26,9 +26,11 @@ What is remembered is which documents were already ingested — the idempotent r
 === Filtering deliveries
 
 Not everything a source delivers belongs in a knowledge base.
-Per pipeline, `filter.include-id` and `filter.exclude-id` take comma-separated Ant-style patterns matched against the document id — exclusion wins, and a rejected delivery never reads the body or occupies its dedup claim.
+Per pipeline, `filter.include-id` and `filter.exclude-id` take comma-separated Ant-style patterns matched against the document id — exclusion wins, and a rejected delivery never takes the sink's dedup claim nor reads the body.
+With a `parser` the body is read anyway: the filters live in the sink, so the parse runs first.
 `filter.min-document-size` rejects documents too short to carry retrievable content, and `filter.document-filter` names a Camel `Predicate` bean evaluated with the body available.
 A rejected delivery is answered with a `filtered` outcome; the enforcement lives in the `camel-langchain4j-ingest` component.
+On a directory pipeline the file register still records a rejected file, so it is not read again until it changes.
 An `@Ingest` pipeline is filtered the same way, through the same properties.
 
 [source,properties]
@@ -134,7 +136,7 @@ With a parser, `max-document-size` also goes to the parser action Kamelet, which
 
 `modality=media` embeds each document whole, as one vector, instead of reading it as text: the bytes go to a multimodal embedding model as audio, an image, video or a PDF, told apart by the MIME type, and the vector is stored with a placeholder segment whose text is the document id, stamped with the usual identity metadata, so retrieval cites it like any other.
 The model must declare the matching content type in its `supportedContentTypes()`: the pipeline fails to start with a text-only model, and a document whose medium the model does not declare fails before its bytes are read.
-`parser` and `document-splitter` must not be set, the splitter sizes and `embedding-batch-size` do not apply, and `max-document-size` counts bytes.
+`parser` and `document-splitter` must not be set, the splitter sizes and `embedding-batch-size` do not apply, and `max-document-size` and `filter.min-document-size` count bytes.
 
 [source,properties]
 ----
@@ -196,6 +198,7 @@ quarkus.camel.langchain4j.ingest.s3docs.embedding-store=products
 
 Each pipeline is one route composed from the catalog's `langchain4j-ingest-file-source`, parser action and `langchain4j-ingest-sink` Kamelets; the engine is the `camel-langchain4j-ingest` component.
 They resolve through the regular Kamelet machinery, so overriding `camel.component.kamelet.location` without keeping `classpath:kamelets`, or shipping an equally named Kamelet, replaces internal steps — including the identity capture — and is advanced surgery.
+The extension puts them into a native image itself, whatever `quarkus.camel.kamelet.identifiers` lists.
 
 === When ingestion fails
 

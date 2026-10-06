@@ -116,7 +116,8 @@ public interface IngestRunTimeConfig {
 
         /**
          * Filters deciding which deliveries are ingested. A rejected delivery is answered with
-         * a `filtered` outcome and never keeps a dedup claim.
+         * a `filtered` outcome and never keeps the sink's dedup claim; a directory pipeline's file
+         * register still records the file, so it is not read again until it changes.
          */
         FilterRunTimeConfig filter();
 
@@ -124,8 +125,9 @@ public interface IngestRunTimeConfig {
 
             /**
              * Comma-separated Ant-style patterns the document id must match to be ingested,
-             * for example `*.pdf,*.md`. A non-matching delivery is rejected before the dedup
-             * claim and without reading the body. When not set, every id is accepted.
+             * for example `*.pdf,*.md`. A non-matching delivery is rejected before the sink's dedup
+             * claim and without reading the body — except with a `parser`, which runs before the
+             * filters. When not set, every id is accepted.
              */
             Optional<String> includeId();
 
@@ -136,8 +138,9 @@ public interface IngestRunTimeConfig {
             Optional<String> excludeId();
 
             /**
-             * Minimum size of one document in characters; 0, the default, means no minimum. A
-             * shorter document is answered `filtered` instead of being written.
+             * Minimum size of one document in characters, in bytes with `modality=media`; 0, the
+             * default, means no minimum. A shorter document is answered `filtered` instead of being
+             * written.
              */
             @WithDefault("0")
             int minDocumentSize();

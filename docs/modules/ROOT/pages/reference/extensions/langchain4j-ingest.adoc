@@ -76,9 +76,11 @@ What is remembered is which documents were already ingested — the idempotent r
 === Filtering deliveries
 
 Not everything a source delivers belongs in a knowledge base.
-Per pipeline, `filter.include-id` and `filter.exclude-id` take comma-separated Ant-style patterns matched against the document id — exclusion wins, and a rejected delivery never reads the body or occupies its dedup claim.
+Per pipeline, `filter.include-id` and `filter.exclude-id` take comma-separated Ant-style patterns matched against the document id — exclusion wins, and a rejected delivery never takes the sink's dedup claim nor reads the body.
+With a `parser` the body is read anyway: the filters live in the sink, so the parse runs first.
 `filter.min-document-size` rejects documents too short to carry retrievable content, and `filter.document-filter` names a Camel `Predicate` bean evaluated with the body available.
 A rejected delivery is answered with a `filtered` outcome; the enforcement lives in the `camel-langchain4j-ingest` component.
+On a directory pipeline the file register still records a rejected file, so it is not read again until it changes.
 An `@Ingest` pipeline is filtered the same way, through the same properties.
 
 [source,properties]
@@ -187,7 +189,7 @@ With a parser, `max-document-size` also goes to the parser action Kamelet, which
 
 `modality=media` embeds each document whole, as one vector, instead of reading it as text: the bytes go to a multimodal embedding model as audio, an image, video or a PDF, told apart by the MIME type, and the vector is stored with a placeholder segment whose text is the document id, stamped with the usual identity metadata, so retrieval cites it like any other.
 The model must declare the matching content type in its `supportedContentTypes()`: the pipeline fails to start with a text-only model, and a document whose medium the model does not declare fails before its bytes are read.
-`parser` and `document-splitter` must not be set, the splitter sizes and `embedding-batch-size` do not apply, and `max-document-size` counts bytes.
+`parser` and `document-splitter` must not be set, the splitter sizes and `embedding-batch-size` do not apply, and `max-document-size` and `filter.min-document-size` count bytes.
 
 [source,properties]
 ----
@@ -251,6 +253,7 @@ quarkus.camel.langchain4j.ingest.s3docs.embedding-store=products
 
 Each pipeline is one route composed from the catalog's `langchain4j-ingest-file-source`, parser action and `langchain4j-ingest-sink` Kamelets; the engine is the `camel-langchain4j-ingest` component.
 They resolve through the regular Kamelet machinery, so overriding `camel.component.kamelet.location` without keeping `classpath:kamelets`, or shipping an equally named Kamelet, replaces internal steps — including the identity capture — and is advanced surgery.
+The extension puts them into a native image itself, whatever `quarkus.camel.kamelet.identifiers` lists.
 
 [id="extensions-langchain4j-ingest-usage-when-ingestion-fails"]
 === When ingestion fails
@@ -333,8 +336,8 @@ segments and embedded segment by segment. `media` is read as bytes and embedded 
 as one vector: audio, an image, video or a PDF, told apart by the MIME type, each
 needing an embedding model that declares the matching content type — the pipeline
 fails to start with a text-only model. In media mode `parser` and `document-splitter`
-must not be set, the splitter sizes and `embedding-batch-size` do not apply, and `max-document-size` counts
-bytes.
+must not be set, the splitter sizes and `embedding-batch-size` do not apply, and
+`max-document-size` and `filter.min-document-size` count bytes.
 | `string`
 | `text`
 
@@ -457,8 +460,9 @@ metadata are re-stamped, so a custom splitter cannot break citation.
 a| [[quarkus-camel-langchain4j-ingest-pipeline-name-filter-include-id]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-filter-include-id[quarkus.camel.langchain4j.ingest."pipeline-name".filter.include-id]`
 
 Comma-separated Ant-style patterns the document id must match to be ingested,
-for example `*.pdf,*.md`. A non-matching delivery is rejected before the dedup
-claim and without reading the body. When not set, every id is accepted.
+for example `*.pdf,*.md`. A non-matching delivery is rejected before the sink's dedup
+claim and without reading the body — except with a `parser`, which runs before the
+filters. When not set, every id is accepted.
 | `string`
 | 
 
@@ -471,8 +475,9 @@ Comma-separated Ant-style patterns for document ids to skip, for example
 
 a| [[quarkus-camel-langchain4j-ingest-pipeline-name-filter-min-document-size]]`link:#quarkus-camel-langchain4j-ingest-pipeline-name-filter-min-document-size[quarkus.camel.langchain4j.ingest."pipeline-name".filter.min-document-size]`
 
-Minimum size of one document in characters; 0, the default, means no minimum. A
-shorter document is answered `filtered` instead of being written.
+Minimum size of one document in characters, in bytes with `modality=media`; 0, the
+default, means no minimum. A shorter document is answered `filtered` instead of being
+written.
 | `int`
 | `0`
 
