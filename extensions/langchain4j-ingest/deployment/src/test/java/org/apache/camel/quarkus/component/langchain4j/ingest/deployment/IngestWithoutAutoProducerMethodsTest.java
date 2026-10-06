@@ -19,17 +19,24 @@ package org.apache.camel.quarkus.component.langchain4j.ingest.deployment;
 import io.quarkus.test.QuarkusExtensionTest;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.apache.camel.quarkus.component.langchain4j.ingest.Ingest;
+import org.apache.camel.quarkus.component.langchain4j.ingest.IngestPipeline;
+import org.apache.camel.quarkus.component.langchain4j.ingest.Source;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-/** An {@code @Ingest} method that does not return {@code IngestPipeline} fails the build. */
-class IngestBuilderMethodShapeTest {
+/**
+ * With ArC's auto producer methods switched off, an {@code @Ingest} method without
+ * {@code @Produces} would declare nothing, so it fails the build instead.
+ */
+class IngestWithoutAutoProducerMethodsTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
             .withApplicationRoot(jar -> jar.addClasses(Pipelines.class))
-            .assertException(t -> ValidationTestSupport.assertFailure(t, "must return IngestPipeline"));
+            .overrideConfigKey("quarkus.arc.auto-producer-methods", "false")
+            .assertException(t -> ValidationTestSupport.assertFailure(t,
+                    "is not a producer method", "annotate it with @Produces"));
 
     @Test
     void buildMustFail() {
@@ -39,9 +46,9 @@ class IngestBuilderMethodShapeTest {
     @ApplicationScoped
     public static class Pipelines {
 
-        @Ingest("bad-return")
-        String badReturn() {
-            return "not a pipeline";
+        @Ingest("docs")
+        IngestPipeline docs() {
+            return IngestPipeline.from(Source.file("target/docs"));
         }
     }
 }

@@ -17,17 +17,16 @@
 package org.apache.camel.quarkus.component.langchain4j.ingest.deployment;
 
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
-import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
+import io.quarkus.arc.deployment.ArcConfig;
 import io.quarkus.arc.deployment.SyntheticBeansRuntimeInitBuildItem;
 import io.quarkus.arc.deployment.ValidationPhaseBuildItem.ValidationErrorBuildItem;
+import io.quarkus.arc.processor.DotNames;
 import io.quarkus.bootstrap.classloading.QuarkusClassLoader;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
@@ -43,10 +42,8 @@ import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedPackageBuildItem;
 import io.quarkus.runtime.configuration.ConfigurationException;
-import jakarta.inject.Singleton;
 import org.apache.camel.quarkus.component.langchain4j.ingest.Ingest;
 import org.apache.camel.quarkus.component.langchain4j.ingest.IngestBuildTimeConfig;
-import org.apache.camel.quarkus.component.langchain4j.ingest.IngestBuilderPipelines;
 import org.apache.camel.quarkus.component.langchain4j.ingest.IngestPipeline;
 import org.apache.camel.quarkus.component.langchain4j.ingest.IngestRoutes;
 import org.apache.camel.quarkus.component.langchain4j.ingest.Langchain4jIngestRecorder;
@@ -57,7 +54,6 @@ import org.apache.camel.quarkus.core.deployment.util.CamelSupport;
 import org.apache.camel.quarkus.core.deployment.util.PathFilter;
 import org.apache.camel.util.URISupport;
 import org.jboss.jandex.AnnotationInstance;
-import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
 
@@ -70,10 +66,15 @@ class Langchain4jIngestProcessor {
         return new FeatureBuildItem(FEATURE);
     }
 
+    /**
+     * {@link Ingest} is listed so that it is indexed: the runtime jar carries no Jandex index, and
+     * only an indexed qualifier lets ArC's auto producer methods turn {@code @Ingest} methods into
+     * producers.
+     */
     @BuildStep
     AdditionalBeanBuildItem beans() {
         return AdditionalBeanBuildItem.builder()
-                .addBeanClasses(IngestRoutes.class)
+                .addBeanClasses(IngestRoutes.class, Ingest.class)
                 .setUnremovable()
                 .build();
     }
@@ -168,34 +169,18 @@ class Langchain4jIngestProcessor {
     }
 
     /**
-     * Discovers {@code @Ingest} builder methods: validated here (return type, no parameters,
-     * unique names, no collision with configuration-declared pipelines), invoked reflectively once
-     * at startup. Violations are reported as {@link ValidationErrorBuildItem}s — the channel every
-     * build-time check of this extension uses, so dev and test mode see them too, and all of them
-     * at once.
+     * {@code @Ingest} methods are CDI producer methods, so ArC validates their shape and IngestRoutes
+     * resolves them; what stays here is what CDI cannot know: a pipeline name is non-blank and unique,
+     * also against configuration-declared pipelines. Violations are reported as
+     * {@link ValidationErrorBuildItem}s — the channel every build-time check of this extension uses,
+     * so dev and test mode see them too, and all of them at once.
      */
     @BuildStep
-    @Record(ExecutionTime.STATIC_INIT)
-    void discoverBuilderPipelines(
-            CombinedIndexBuildItem combinedIndex,
-            IngestBuildTimeConfig config,
-            Langchain4jIngestRecorder recorder,
-            BuildProducer<AdditionalBeanBuildItem> beans,
-            BuildProducer<ReflectiveClassBuildItem> reflectiveClasses,
-            BuildProducer<SyntheticBeanBuildItem> syntheticBeans,
+    void validateIngestMethods(CombinedIndexBuildItem combinedIndex, IngestBuildTimeConfig config, ArcConfig arcConfig,
             BuildProducer<ValidationErrorBuildItem> validationErrors) {
-
-        DotName ingestAnnotation = DotName.createSimple(Ingest.class.getName());
-        DotName pipelineType = DotName.createSimple(IngestPipeline.class.getName());
-
-        List<String> flatEntries = new ArrayList<>();
         Set<String> names = new HashSet<>();
-        Set<String> beanClasses = new HashSet<>();
-
-        for (AnnotationInstance annotation : combinedIndex.getIndex().getAnnotations(ingestAnnotation)) {
-            if (annotation.target().kind() != AnnotationTarget.Kind.METHOD) {
-                continue;
-            }
+        for (AnnotationInstance annotation : combinedIndex.getIndex()
+                .getAnnotations(DotName.createSimple(Ingest.class.getName()))) {
             MethodInfo method = annotation.target().asMethod();
             String name = annotation.value().asString();
             String location = method.declaringClass().name() + "#" + method.name();
@@ -203,60 +188,18 @@ class Langchain4jIngestProcessor {
             if (name.isBlank()) {
                 validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
                         "@Ingest on " + location + " has a blank pipeline name")));
-                continue;
-            }
-            if (!method.returnType().name().equals(pipelineType)) {
-                validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
-                        "@Ingest method " + location + " must return " + IngestPipeline.class.getSimpleName())));
-                continue;
-            }
-            if (!method.parameters().isEmpty()) {
-                validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
-                        "@Ingest method " + location + " must take no parameters")));
-                continue;
-            }
-            // the method is invoked on a CDI bean instance, which a static method would bypass
-            // and a private one would run against the client proxy, seeing null injected fields
-            if (Modifier.isPrivate(method.flags()) || Modifier.isStatic(method.flags())) {
-                validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
-                        "@Ingest method " + location + " must not be private or static")));
-                continue;
-            }
-            // a client proxy can neither override a final method nor extend a final class, so on
-            // a normal-scoped bean the call would silently run against the proxy's null fields
-            if (Modifier.isFinal(method.flags()) || Modifier.isFinal(method.declaringClass().flags())) {
-                validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
-                        "@Ingest method " + location + " must not be final, nor declared on a final class")));
-                continue;
-            }
-            if (!names.add(name) || config.pipelines().containsKey(name)) {
+            } else if (!names.add(name) || config.pipelines().containsKey(name)) {
                 validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
                         "Ingestion pipeline '" + name + "' is declared more than once "
                                 + "(builder and/or configuration). Pipeline names must be unique.")));
-                continue;
             }
-
-            flatEntries.add(name);
-            flatEntries.add(method.declaringClass().name().toString());
-            flatEntries.add(method.name());
-            beanClasses.add(method.declaringClass().name().toString());
+            // without auto producer methods, an @Ingest method lacking @Produces would declare nothing
+            if (!arcConfig.autoProducerMethods() && !method.hasDeclaredAnnotation(DotNames.PRODUCES)) {
+                validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
+                        "@Ingest method " + location + " is not a producer method: annotate it with @Produces, or"
+                                + " leave quarkus.arc.auto-producer-methods enabled")));
+            }
         }
-
-        if (!beanClasses.isEmpty()) {
-            beans.produce(AdditionalBeanBuildItem.builder()
-                    .addBeanClasses(beanClasses.toArray(new String[0]))
-                    .setUnremovable()
-                    .build());
-            reflectiveClasses.produce(ReflectiveClassBuildItem.builder(beanClasses.toArray(new String[0]))
-                    .methods()
-                    .build());
-        }
-
-        syntheticBeans.produce(SyntheticBeanBuildItem.configure(IngestBuilderPipelines.class)
-                .scope(Singleton.class)
-                .unremovable()
-                .runtimeValue(recorder.createBuilderPipelines(flatEntries))
-                .done());
     }
 
     /**

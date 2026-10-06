@@ -218,7 +218,8 @@ IngestPipeline events() {
 ----
 
 Typing `dsl.` lists a factory for every component, each completing its own typed options.
-The method runs once at startup; it must return `IngestPipeline`, take no parameters and use a name no configured pipeline uses.
+`@Ingest` is a CDI qualifier that makes the method a producer method, so its parameters are injection points (with `quarkus.arc.auto-producer-methods=false`, add `@Produces`).
+It runs once at startup, never for a pipeline switched off, and its name must be unique and unused by configured pipelines.
 `enabled=false` in configuration switches a Java-declared pipeline off, and the `filter.*` properties apply to it too.
 Other `source.*` properties are rejected for a Java-declared pipeline — except `source.recursive`, which cannot be told apart from its default and is silently ignored; use `Source.recursive()` instead.
 A component missing from the classpath fails at startup with an error naming the extension artifact that provides it — the DSL compiles regardless, since its factories all ship in one artifact.

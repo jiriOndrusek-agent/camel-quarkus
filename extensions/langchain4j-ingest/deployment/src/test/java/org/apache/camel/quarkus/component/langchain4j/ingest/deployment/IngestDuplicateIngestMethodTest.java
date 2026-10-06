@@ -25,16 +25,14 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-/**
- * A private {@code @Ingest} method would be invoked against the ArC client proxy, whose injected
- * fields are null — so the build rejects it instead of letting it misbehave at startup.
- */
-class IngestBuilderPrivateMethodTest {
+/** Two {@code @Ingest} methods sharing a name fail the build; to CDI they are just two beans. */
+class IngestDuplicateIngestMethodTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest CONFIG = new QuarkusExtensionTest()
             .withApplicationRoot(jar -> jar.addClasses(Pipelines.class))
-            .assertException(t -> ValidationTestSupport.assertFailure(t, "must not be private or static"));
+            .assertException(t -> ValidationTestSupport.assertFailure(t,
+                    "Ingestion pipeline 'docs' is declared more than once"));
 
     @Test
     void buildMustFail() {
@@ -44,9 +42,14 @@ class IngestBuilderPrivateMethodTest {
     @ApplicationScoped
     public static class Pipelines {
 
-        @Ingest("private-docs")
-        private IngestPipeline privateDocs() {
-            return IngestPipeline.from(Source.file("target/private-docs"));
+        @Ingest("docs")
+        IngestPipeline docs() {
+            return IngestPipeline.from(Source.file("target/docs"));
+        }
+
+        @Ingest("docs")
+        IngestPipeline moreDocs() {
+            return IngestPipeline.from(Source.file("target/more-docs"));
         }
     }
 }

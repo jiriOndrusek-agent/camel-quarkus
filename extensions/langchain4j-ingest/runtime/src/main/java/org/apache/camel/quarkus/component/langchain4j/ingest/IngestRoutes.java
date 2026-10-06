@@ -17,7 +17,9 @@
 package org.apache.camel.quarkus.component.langchain4j.ingest;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -27,6 +29,7 @@ import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.Dependent;
 import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.literal.NamedLiteral;
@@ -59,7 +62,7 @@ import static org.apache.camel.quarkus.component.langchain4j.ingest.IngestCompos
 
 /**
  * Translates the extension's configuration model — build-time and runtime properties and
- * {@code @Ingest} builder methods — into one {@link PipelineSpec} per pipeline, and each spec into
+ * {@code @Ingest} producer methods — into one {@link PipelineSpec} per pipeline, and each spec into
  * one composition route over the langchain4j-ingest Kamelets: the
  * {@code langchain4j-ingest-file-source} Kamelet (or any consumer URI), through the
  * {@code tika-extract-text-action} or {@code docling-convert-action} Kamelet when a parser is
@@ -85,8 +88,10 @@ public class IngestRoutes extends RouteBuilder {
     @Inject
     IngestRunTimeConfig runTimeConfig;
 
+    // the @Ingest producer methods
     @Inject
-    IngestBuilderPipelines builderPipelines;
+    @Any
+    Instance<IngestPipeline> declaredPipelines;
 
     // these injection points also keep an unnamed store or model bean from being removed as
     // unused - nothing else in the application need inject it
@@ -98,18 +103,19 @@ public class IngestRoutes extends RouteBuilder {
     @Any
     Instance<EmbeddingModel> modelCandidates;
 
+    private Set<String> javaNames;
+
+    private Map<String, IngestPipeline> javaPipelines;
+
     @Override
     public void configure() {
         // a pipeline may be declared entirely through runtime properties - the documented
         // minimum is a directory and nothing else - so the two config roots are unioned. Keying
         // off the build-time map alone would make that configuration a silent no-op, since
         // SmallRye only materialises a map key for the mapping whose structure a property matches
-        Set<String> builderDeclared = builderPipelines.entries().stream()
-                .map(IngestBuilderPipelines.Entry::name)
-                .collect(Collectors.toSet());
         Set<String> names = new TreeSet<>(buildTimeConfig.pipelines().keySet());
         names.addAll(runTimeConfig.pipelines().keySet());
-        names.removeAll(builderDeclared);
+        names.removeAll(javaNames());
 
         for (String name : names) {
             IngestRunTimeConfig.PipelineRunTimeConfig runtime = runTimeConfig.pipelines().get(name);
@@ -120,34 +126,68 @@ public class IngestRoutes extends RouteBuilder {
             compositionRoute(PipelineSpec.fromConfig(name, buildTimeConfig.pipelines().get(name), runtime));
         }
 
-        for (IngestBuilderPipelines.Entry entry : builderPipelines.entries()) {
-            builderPipeline(entry);
-        }
+        javaPipelines().forEach((name, pipeline) -> compositionRoute(
+                PipelineSpec.fromBuilder(name, pipeline, runTimeConfig.pipelines().get(name))));
     }
 
-    /** An {@code @Ingest}-declared pipeline: the builder twin of the configuration path. */
-    private void builderPipeline(IngestBuilderPipelines.Entry entry) {
-        String name = entry.name();
-        // configuration can still switch a builder-declared pipeline off, and the check precedes
-        // the invocation so a disabled pipeline's method never runs
-        IngestRunTimeConfig.PipelineRunTimeConfig external = runTimeConfig.pipelines().get(name);
-        if (external != null && !external.enabled()) {
-            LOG.infof("Ingestion pipeline '%s' (builder) is disabled", name);
+    /** The names of all {@code @Ingest} pipelines, switched off or not. */
+    synchronized Set<String> javaNames() {
+        resolveJavaPipelines();
+        return javaNames;
+    }
+
+    /**
+     * The enabled {@code @Ingest} pipelines by name, each producer method invoked once: the
+     * pre-start component check and {@link #configure()} share them.
+     */
+    synchronized Map<String, IngestPipeline> javaPipelines() {
+        resolveJavaPipelines();
+        return javaPipelines;
+    }
+
+    private void resolveJavaPipelines() {
+        if (javaPipelines != null) {
             return;
         }
-        // enabled and the filter.* options are what configuration may say about a builder
-        // pipeline; anything about its source would be quietly overruled by the @Ingest method,
-        // so it is an error instead (source.recursive cannot be told apart from its default, so
-        // it alone goes undetected - Source.recursive() is its builder twin)
-        if (external != null && (external.source().directory().isPresent()
-                || external.source().documentId().isPresent()
-                || external.source().idempotentRepository().isPresent()
-                || external.source().idempotentRepositoryAutoCreate())) {
-            throw new IllegalStateException("Ingestion pipeline '" + name + "' is declared in Java, so its source "
-                    + "comes from the @Ingest method. Remove quarkus.camel.langchain4j.ingest." + name + ".source.* , or "
-                    + "declare the pipeline in configuration instead.");
+        Set<String> names = new TreeSet<>();
+        Map<String, IngestPipeline> pipelines = new TreeMap<>();
+        for (Instance.Handle<IngestPipeline> handle : declaredPipelines.handles()) {
+            // the name is read from the qualifier, so a switched-off pipeline's method never runs
+            String name = handle.getBean().getQualifiers().stream()
+                    .filter(Ingest.class::isInstance)
+                    .map(qualifier -> ((Ingest) qualifier).value())
+                    .findFirst()
+                    .orElse(null);
+            if (name == null) {
+                // an IngestPipeline produced without @Ingest declares no pipeline
+                continue;
+            }
+            names.add(name);
+            IngestRunTimeConfig.PipelineRunTimeConfig external = runTimeConfig.pipelines().get(name);
+            if (external != null && !external.enabled()) {
+                LOG.infof("Ingestion pipeline '%s' (builder) is disabled", name);
+                continue;
+            }
+            // enabled and the filter.* options are what configuration may say about a builder
+            // pipeline; anything about its source would be quietly overruled by the @Ingest method,
+            // so it is an error instead (source.recursive cannot be told apart from its default, so
+            // it alone goes undetected - Source.recursive() is its builder twin)
+            if (external != null && (external.source().directory().isPresent()
+                    || external.source().documentId().isPresent()
+                    || external.source().idempotentRepository().isPresent()
+                    || external.source().idempotentRepositoryAutoCreate())) {
+                throw new IllegalStateException("Ingestion pipeline '" + name + "' is declared in Java, so its source "
+                        + "comes from the @Ingest method. Remove quarkus.camel.langchain4j.ingest." + name
+                        + ".source.* , or declare the pipeline in configuration instead.");
+            }
+            pipelines.put(name, handle.get());
+            if (Dependent.class.equals(handle.getBean().getScope())) {
+                // the returned pipeline is a plain value; the dependent instance is not kept
+                handle.destroy();
+            }
         }
-        compositionRoute(PipelineSpec.fromBuilder(name, builderPipelines.definition(entry), external));
+        javaNames = names;
+        javaPipelines = pipelines;
     }
 
     /**

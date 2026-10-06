@@ -16,6 +16,8 @@
  */
 package org.apache.camel.quarkus.component.langchain4j.ingest;
 
+import java.util.Map;
+
 import org.apache.camel.CamelContext;
 import org.apache.camel.util.URISupport;
 import org.jboss.logging.Logger;
@@ -42,7 +44,7 @@ final class IngestComponentPresence {
 
     /** Walks every pipeline that consumes from a component and requires the component present. */
     static void check(CamelContext context, IngestBuildTimeConfig buildTimeConfig,
-            IngestRunTimeConfig runTimeConfig, IngestBuilderPipelines builderPipelines) {
+            IngestRunTimeConfig runTimeConfig, Map<String, IngestPipeline> javaPipelines) {
         for (var entry : buildTimeConfig.pipelines().entrySet()) {
             IngestRunTimeConfig.PipelineRunTimeConfig runtime = runTimeConfig.pipelines().get(entry.getKey());
             if (runtime != null && !runtime.enabled()) {
@@ -54,23 +56,10 @@ final class IngestComponentPresence {
             }
         }
 
-        for (IngestBuilderPipelines.Entry entry : builderPipelines.entries()) {
-            IngestRunTimeConfig.PipelineRunTimeConfig external = runTimeConfig.pipelines().get(entry.name());
-            if (external != null && !external.enabled()) {
-                // a disabled pipeline's @Ingest method must not run at all
-                continue;
-            }
-            if (external != null && (external.source().directory().isPresent()
-                    || external.source().documentId().isPresent()
-                    || external.source().idempotentRepository().isPresent()
-                    || external.source().idempotentRepositoryAutoCreate())) {
-                // the route builder refuses this conflict with its own error; invoking the
-                // method here first would change which failure the user sees
-                continue;
-            }
-            IngestPipeline definition = builderPipelines.definition(entry);
+        // the enabled @Ingest pipelines only, already resolved - the route builder reuses them
+        javaPipelines.forEach((name, definition) -> {
             if ("endpoint".equals(definition.sourceType())) {
-                require(context, entry.name(), definition.sourceUri());
+                require(context, name, definition.sourceUri());
             }
             // a builder-declared parser is out of reach of the build-time check, like the URI;
             // resolved without starting the component - the route builder starts it later. No
@@ -78,12 +67,12 @@ final class IngestComponentPresence {
             // real error, only an unresolvable one earns the artifact hint below
             String parser = definition.parser().orElse(null);
             if (parser != null && context.getComponent(parser, true, false) == null) {
-                throw new IllegalStateException("Ingestion pipeline '" + entry.name() + "' parses with '" + parser
+                throw new IllegalStateException("Ingestion pipeline '" + name + "' parses with '" + parser
                         + "', but the Camel component '" + parser + "' is not on the classpath. "
                         + "Add the extension that provides it, e.g. org.apache.camel.quarkus:camel-quarkus-"
                         + parser);
             }
-        }
+        });
     }
 
     private static void require(CamelContext context, String name, String uri) {

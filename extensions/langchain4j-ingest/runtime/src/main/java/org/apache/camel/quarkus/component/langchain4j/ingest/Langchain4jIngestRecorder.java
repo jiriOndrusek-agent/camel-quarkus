@@ -16,9 +16,6 @@
  */
 package org.apache.camel.quarkus.component.langchain4j.ingest;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ArcContainer;
 import io.quarkus.runtime.RuntimeValue;
@@ -27,16 +24,6 @@ import org.apache.camel.CamelContext;
 
 @Recorder
 public class Langchain4jIngestRecorder {
-
-    /** @param flatEntries triples: name, class name, method name */
-    public RuntimeValue<IngestBuilderPipelines> createBuilderPipelines(List<String> flatEntries) {
-        List<IngestBuilderPipelines.Entry> entries = new ArrayList<>(flatEntries.size() / 3);
-        for (int i = 0; i < flatEntries.size(); i += 3) {
-            entries.add(new IngestBuilderPipelines.Entry(
-                    flatEntries.get(i), flatEntries.get(i + 1), flatEntries.get(i + 2)));
-        }
-        return new RuntimeValue<>(new IngestBuilderPipelines(entries));
-    }
 
     /**
      * Recorded as a pre-start Camel runtime task, so it runs before Camel Main binds
@@ -48,6 +35,6 @@ public class Langchain4jIngestRecorder {
                 camelContext.getValue(),
                 container.instance(IngestBuildTimeConfig.class).get(),
                 container.instance(IngestRunTimeConfig.class).get(),
-                container.instance(IngestBuilderPipelines.class).get());
+                container.instance(IngestRoutes.class).get().javaPipelines());
     }
 }
