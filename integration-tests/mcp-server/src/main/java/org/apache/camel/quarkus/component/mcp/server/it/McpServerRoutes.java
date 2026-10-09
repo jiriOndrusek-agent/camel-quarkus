@@ -37,8 +37,9 @@ public class McpServerRoutes extends RouteBuilder {
                     throw new IllegalStateException("secret internal detail");
                 });
 
+        // between tool-timeout and resource-timeout, like delayed_resource
         from("ai-tool:slow_tool?tags=conformance&description=Exceeds the tool timeout")
-                .delay(6000)
+                .delay(3000)
                 .setBody(constant("done"));
 
         from("ai-tool:hidden_tool?description=Untagged tool, must not be exposed")
@@ -60,5 +61,46 @@ public class McpServerRoutes extends RouteBuilder {
                     List<?> items = e.getMessage().getHeader("items", List.class);
                     e.getMessage().setBody("order for customer " + customer.get("id") + " with " + items.size() + " item(s)");
                 });
+
+        from("ai-resource:app_config?resourceUri=camel:///config/app.json&tags=conformance"
+                + "&description=Application configuration&mimeType=application/json&title=App config")
+                .routeId("app-config-route")
+                .setBody(constant("{\"env\":\"test\"}"));
+
+        from("ai-resource:latest_report?resourceUri=camel:///reports/latest.pdf&tags=conformance"
+                + "&description=Latest report&mimeType=application/pdf")
+                .setBody(constant(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
+
+        from("ai-resource:fail_resource?resourceUri=camel:///fail&tags=conformance&description=Always fails")
+                .process(e -> {
+                    throw new IllegalStateException("secret internal detail");
+                });
+
+        from("ai-resource:slow_resource?resourceUri=camel:///slow&tags=conformance"
+                + "&description=Exceeds the resource timeout")
+                .delay(6000)
+                .setBody(constant("done"));
+
+        // between tool-timeout and resource-timeout, like slow_tool
+        from("ai-resource:delayed_resource?resourceUri=camel:///delayed&tags=conformance"
+                + "&description=Exceeds the tool timeout, not the resource timeout")
+                .delay(3000)
+                .setBody(constant("delayed"));
+
+        from("ai-resource:hidden_resource?resourceUri=camel:///hidden"
+                + "&description=Untagged resource, must not be exposed")
+                .setBody(constant("hidden"));
+
+        from("ai-resource:other_resource?resourceUri=camel:///other&tags=untrusted"
+                + "&description=Not a selected tag, must not be exposed")
+                .setBody(constant("other"));
+
+        from("ai-resource:same_name?resourceUri=camel:///same/first&tags=conformance"
+                + "&description=First resource named same_name")
+                .setBody(constant("first"));
+
+        from("ai-resource:same_name?resourceUri=camel:///same/second&tags=conformance"
+                + "&description=Name already taken, must be refused")
+                .setBody(constant("second"));
     }
 }
