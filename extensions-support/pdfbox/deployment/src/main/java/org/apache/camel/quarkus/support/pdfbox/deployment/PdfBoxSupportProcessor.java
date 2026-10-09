@@ -21,6 +21,7 @@ import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceDirectoryBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedPackageBuildItem;
 
 /**
  * Native image configuration for Apache PDFBox, shared by the extensions whose applications use it.
@@ -30,9 +31,14 @@ class PdfBoxSupportProcessor {
     private static final String[] RUNTIME_INITIALIZED_CLASSES = new String[] {
             "org.apache.pdfbox.pdmodel.font.PDType1Font",
             "org.apache.pdfbox.pdmodel.PDDocument",
-            "org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB",
-            "org.apache.pdfbox.pdmodel.graphics.color.PDDeviceGray",
             "org.apache.pdfbox.pdmodel.encryption.StandardSecurityHandler"
+    };
+
+    // AWT-holding statics, e.g. SoftMask's DirectColorModel or the ICC_ColorSpace of the CIE color spaces, which text
+    // extraction (e.g. by Tika) reaches
+    private static final String[] RUNTIME_INITIALIZED_PACKAGES = new String[] {
+            "org.apache.pdfbox.rendering",
+            "org.apache.pdfbox.pdmodel.graphics"
     };
 
     /**
@@ -45,9 +51,13 @@ class PdfBoxSupportProcessor {
     }
 
     @BuildStep
-    void configureRuntimeInitializedClasses(BuildProducer<RuntimeInitializedClassBuildItem> runtimeInitializedClass) {
+    void configureRuntimeInitializedClasses(BuildProducer<RuntimeInitializedClassBuildItem> runtimeInitializedClass,
+            BuildProducer<RuntimeInitializedPackageBuildItem> runtimeInitializedPackage) {
         for (String className : RUNTIME_INITIALIZED_CLASSES) {
             runtimeInitializedClass.produce(new RuntimeInitializedClassBuildItem(className));
+        }
+        for (String packageName : RUNTIME_INITIALIZED_PACKAGES) {
+            runtimeInitializedPackage.produce(new RuntimeInitializedPackageBuildItem(packageName));
         }
     }
 

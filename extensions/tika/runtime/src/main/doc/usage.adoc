@@ -1,0 +1,16 @@
+=== Parser modules
+
+Tika parses only the formats whose parser module is on the classpath.
+`camel-tika` brings the HTML and plain text modules. For any other format, add its module to your application, e.g. for PDF:
+
+[source,xml]
+----
+<dependency>
+    <groupId>org.apache.tika</groupId>
+    <artifactId>tika-parser-pdf-module</artifactId>
+</dependency>
+----
+
+Its version is managed by the Camel Quarkus BOM.
+
+In native mode, the HTML, plain text and PDF modules are supported.

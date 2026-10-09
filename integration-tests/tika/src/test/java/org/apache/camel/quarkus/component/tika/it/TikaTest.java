@@ -46,6 +46,11 @@ class TikaTest {
     }
 
     @Test
+    public void testPdf() throws Exception {
+        testParse("quarkus.pdf", "application/pdf", "Hello Quarkus");
+    }
+
+    @Test
     public void testDetectDoc() throws Exception {
         testDetect("test.doc", "application/x-tika-msoffice");
     }

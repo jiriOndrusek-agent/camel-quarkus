@@ -18,10 +18,13 @@ package org.apache.camel.quarkus.component.tika.deployment;
 
 import java.util.Set;
 
+import io.quarkus.bootstrap.classloading.QuarkusClassLoader;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.ExcludeConfigBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedPackageBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ServiceProviderBuildItem;
 import io.quarkus.deployment.util.ServiceUtil;
 import org.apache.tika.detect.EncodingDetector;
@@ -46,6 +49,29 @@ class TikaProcessor {
         serviceProvider.produce(new ServiceProviderBuildItem(EncodingDetector.class.getName(),
                 getProviderNames(EncodingDetector.class.getName())));
         serviceProvider.produce(new ServiceProviderBuildItem(Parser.class.getName(), getProviderNames(Parser.class.getName())));
+    }
+
+    /**
+     * Native support for {@code tika-parser-pdf-module}, when the application adds it. PDFBox itself is configured by
+     * camel-quarkus-support-pdfbox, which the module's PDFBox dependency activates.
+     */
+    @BuildStep
+    void pdfParserModule(
+            BuildProducer<RuntimeInitializedPackageBuildItem> runtimeInitializedPackage,
+            BuildProducer<ExcludeConfigBuildItem> excludeConfig) {
+        if (!QuarkusClassLoader.isClassPresentAtRuntime("org.apache.tika.parser.pdf.PDFParser")) {
+            return;
+        }
+        // Tika's PDF classes hold PDFBox's AWT-backed values in static state, e.g. PDFParserConfig$TikaImageType
+        runtimeInitializedPackage.produce(new RuntimeInitializedPackageBuildItem("org.apache.tika.parser.pdf"));
+
+        // The module brings jaxb-runtime -> angus-activation, whose GraalVM feature reflects over all mailcap
+        // handlers and fails on the BouncyCastle S/MIME ones (bcjmail) when jakarta.mail is absent. Nothing here
+        // needs the mailcap handlers, so the feature is skipped in that case
+        if (!QuarkusClassLoader.isClassPresentAtRuntime("jakarta.mail.Part")) {
+            excludeConfig.produce(new ExcludeConfigBuildItem("org\\.eclipse\\.angus\\.angus-activation-.*\\.jar",
+                    "/META-INF/native-image/org.eclipse.angus/angus-activation/native-image.properties"));
+        }
     }
 
     private Set<String> getProviderNames(String serviceProviderName) throws Exception {

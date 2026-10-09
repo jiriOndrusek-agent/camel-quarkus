@@ -33,6 +33,11 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-core</artifactId>
         </dependency>
+        <!-- PDFBox logs via commons-logging -->
+        <dependency>
+            <groupId>org.apache.camel.quarkus</groupId>
+            <artifactId>camel-quarkus-support-commons-logging</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -40,6 +45,12 @@
             <plugin>
                 <groupId>io.quarkus</groupId>
                 <artifactId>quarkus-extension-maven-plugin</artifactId>
+                <configuration>
+                    <!-- Lets extensions where PDFBox is optional (e.g. tika) activate this one only with PDFBox -->
+                    <dependencyCondition>
+                        <artifact>org.apache.pdfbox:pdfbox</artifact>
+                    </dependencyCondition>
+                </configuration>
             </plugin>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
