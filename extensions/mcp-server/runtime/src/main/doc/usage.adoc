@@ -42,6 +42,16 @@ text content. See
 xref:{cq-camel-components}::ai-tool-component.adoc#_structured_tool_output_outputschema[Structured Tool Output]
 in the AI Tool component documentation.
 
+=== Resources
+
+Add the `camel-quarkus-ai-resource` extension to define
+xref:{cq-camel-components}::ai-resource-component.adoc[`ai-resource`] routes:
+the tagged ones are served as MCP resources, selected by the same
+`quarkus.camel.mcp-server.tags`. A failed read returns a JSON-RPC error with
+the generic message `Resource read failed`; a read exceeding
+`quarkus.camel.mcp-server.resource-timeout` returns `Resource read timed out`.
+Resource names must be unique, as quarkus-mcp-server requires.
+
 === Combining the Camel and quarkus-mcp-server configuration
 
 The configuration is split by ownership: `quarkus.camel.mcp-server.*`

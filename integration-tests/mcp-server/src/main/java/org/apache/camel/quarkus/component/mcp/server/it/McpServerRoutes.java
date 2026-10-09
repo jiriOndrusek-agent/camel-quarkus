@@ -69,5 +69,32 @@ public class McpServerRoutes extends RouteBuilder {
                 + "&outputParameter.temperature=number&outputParameter.temperature.required=true"
                 + "&outputParameter.unit=string&outputParameter.unit.enum=celsius,fahrenheit")
                 .setBody(constant("{\"temperature\":21.5,\"unit\":\"celsius\"}"));
+
+        from("ai-resource:app_config?resourceUri=camel:///config/app.json&tags=conformance"
+                + "&description=Application configuration&mimeType=application/json")
+                .routeId("app-config-route")
+                .setBody(constant("{\"env\":\"test\"}"));
+
+        from("ai-resource:latest_report?resourceUri=camel:///reports/latest.pdf&tags=conformance"
+                + "&description=Latest report&mimeType=application/pdf")
+                .setBody(constant(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
+
+        from("ai-resource:fail_resource?resourceUri=camel:///fail&tags=conformance&description=Always fails")
+                .process(e -> {
+                    throw new IllegalStateException("secret internal detail");
+                });
+
+        from("ai-resource:slow_resource?resourceUri=camel:///slow&tags=conformance"
+                + "&description=Exceeds the resource timeout")
+                .delay(6000)
+                .setBody(constant("done"));
+
+        from("ai-resource:hidden_resource?resourceUri=camel:///hidden"
+                + "&description=Untagged resource, must not be exposed")
+                .setBody(constant("hidden"));
+
+        from("ai-resource:other_resource?resourceUri=camel:///other&tags=untrusted"
+                + "&description=Not a selected tag, must not be exposed")
+                .setBody(constant("other"));
     }
 }

@@ -17,15 +17,22 @@
 package org.apache.camel.quarkus.component.mcp.server.it;
 
 import java.net.URI;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import io.quarkiverse.mcp.server.BlobResourceContents;
+import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.TextContent;
+import io.quarkiverse.mcp.server.TextResourceContents;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.test.McpAssured;
 import io.quarkiverse.mcp.server.test.McpAssured.McpStreamableTestClient;
+import io.quarkiverse.mcp.server.test.McpAssured.ResourceInfo;
+import io.quarkiverse.mcp.server.test.McpAssured.ResourcesPage;
+import io.quarkiverse.mcp.server.test.McpAssured.ServerCapability;
 import io.quarkiverse.mcp.server.test.McpAssured.ToolInfo;
 import io.quarkiverse.mcp.server.test.McpAssured.ToolsPage;
 import io.quarkus.test.junit.QuarkusTest;
@@ -216,31 +223,122 @@ class McpServerTest {
                 .toolsList(page -> assertThat(toolNames(page)).contains("say_hello"))
                 .thenAssertResults();
 
-        controlRoute("stop");
-        assertThat(routeStatus()).isEqualTo("Stopped");
+        controlRoute("say-hello-route", "stop");
+        assertThat(routeStatus("say-hello-route")).isEqualTo("Stopped");
         await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> client().when()
                 .toolsList(page -> assertThat(toolNames(page)).doesNotContain("say_hello"))
                 .thenAssertResults());
 
-        controlRoute("start");
-        assertThat(routeStatus()).isEqualTo("Started");
+        controlRoute("say-hello-route", "start");
+        assertThat(routeStatus("say-hello-route")).isEqualTo("Started");
         await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> client().when()
                 .toolsList(page -> assertThat(toolNames(page)).contains("say_hello"))
                 .thenAssertResults());
     }
 
-    private static void controlRoute(String action) {
+    // The resource scenarios below mirror McpServerResourceConformanceTestSupport from camel-mcp-server-api
+
+    @Test
+    void testServerAdvertisesResourcesCapability() {
+        assertThat(client().initResult().capabilities()).extracting(ServerCapability::name).contains("resources");
+    }
+
+    @Test
+    void testListResourcesExposesOnlySelectedTags() {
+        client().when()
+                .resourcesList(page -> {
+                    assertThat(resourceUris(page))
+                            .contains("camel:///config/app.json", "camel:///reports/latest.pdf", "camel:///fail",
+                                    "camel:///slow")
+                            .doesNotContain("camel:///hidden", "camel:///other");
+
+                    ResourceInfo config = page.findByUri("camel:///config/app.json");
+                    assertThat(config.name()).isEqualTo("app_config");
+                    assertThat(config.description()).isEqualTo("Application configuration");
+                    assertThat(config.mimeType()).isEqualTo("application/json");
+                })
+                .thenAssertResults();
+    }
+
+    @Test
+    void testReadTextResource() {
+        client().when()
+                .resourcesRead("camel:///config/app.json", response -> {
+                    assertThat(response.contents()).hasSize(1);
+                    TextResourceContents contents = response.contents().get(0).asText();
+                    assertThat(contents.uri()).isEqualTo("camel:///config/app.json");
+                    assertThat(contents.mimeType()).isEqualTo("application/json");
+                    assertThat(contents.text()).isEqualTo("{\"env\":\"test\"}");
+                })
+                .thenAssertResults();
+    }
+
+    @Test
+    void testReadBinaryResource() {
+        client().when()
+                .resourcesRead("camel:///reports/latest.pdf", response -> {
+                    assertThat(response.contents()).hasSize(1);
+                    BlobResourceContents contents = response.contents().get(0).asBlob();
+                    assertThat(contents.mimeType()).isEqualTo("application/pdf");
+                    assertThat(Base64.getDecoder().decode(contents.blob())).isEqualTo(new byte[] { 0x25, 0x50, 0x44, 0x46 });
+                })
+                .thenAssertResults();
+    }
+
+    @Test
+    void testReadResourceErrorIsSanitized() {
+        client().when()
+                .resourcesRead("camel:///fail")
+                .withErrorAssert(error -> {
+                    assertThat(error.code()).isEqualTo(JsonRpcErrorCodes.INTERNAL_ERROR);
+                    assertThat(error.message())
+                            .doesNotContain("secret internal detail")
+                            .isEqualTo("Resource read failed");
+                })
+                .send()
+                .thenAssertResults();
+    }
+
+    @Test
+    void testReadResourceTimeout() {
+        client().when()
+                .resourcesRead("camel:///slow")
+                .withErrorAssert(error -> assertThat(error.message()).contains("timed out"))
+                .send()
+                .thenAssertResults();
+    }
+
+    @Test
+    void testResourcesListReflectsRouteStopAndStart() {
+        client().when()
+                .resourcesList(page -> assertThat(resourceUris(page)).contains("camel:///config/app.json"))
+                .thenAssertResults();
+
+        controlRoute("app-config-route", "stop");
+        assertThat(routeStatus("app-config-route")).isEqualTo("Stopped");
+        await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> client().when()
+                .resourcesList(page -> assertThat(resourceUris(page)).doesNotContain("camel:///config/app.json"))
+                .thenAssertResults());
+
+        controlRoute("app-config-route", "start");
+        assertThat(routeStatus("app-config-route")).isEqualTo("Started");
+        await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> client().when()
+                .resourcesList(page -> assertThat(resourceUris(page)).contains("camel:///config/app.json"))
+                .thenAssertResults());
+    }
+
+    private static void controlRoute(String routeId, String action) {
         RestAssured.given()
                 .when()
-                .post("/mcp-server/route/say-hello-route/" + action)
+                .post("/mcp-server/route/" + routeId + "/" + action)
                 .then()
                 .statusCode(204);
     }
 
-    private static String routeStatus() {
+    private static String routeStatus(String routeId) {
         return RestAssured.given()
                 .when()
-                .get("/mcp-server/route/say-hello-route/status")
+                .get("/mcp-server/route/" + routeId + "/status")
                 .then()
                 .statusCode(200)
                 .extract()
@@ -250,6 +348,10 @@ class McpServerTest {
 
     private static List<String> toolNames(ToolsPage page) {
         return page.tools().stream().map(ToolInfo::name).toList();
+    }
+
+    private static List<String> resourceUris(ResourcesPage page) {
+        return page.resources().stream().map(ResourceInfo::uri).toList();
     }
 
     private static ToolInfo toolByName(ToolsPage page, String name) {
