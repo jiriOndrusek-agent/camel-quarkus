@@ -16,73 +16,15 @@
  */
 package org.apache.camel.quarkus.component.pdf.deployment;
 
-import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
-import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceBuildItem;
-import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
-import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
-import org.apache.pdfbox.pdmodel.documentinterchange.logicalstructure.PDParentTreeValue;
-import org.apache.pdfbox.pdmodel.encryption.StandardSecurityHandler;
 
 class PdfProcessor {
 
     private static final String FEATURE = "camel-pdf";
 
-    private static final String[] RUNTIME_RESOURCES = new String[] {
-            "org/apache/pdfbox/resources/version.properties",
-            "org/apache/pdfbox/resources/afm/Courier.afm",
-            "org/apache/pdfbox/resources/afm/Courier-Bold.afm",
-            "org/apache/pdfbox/resources/afm/Courier-BoldOblique.afm",
-            "org/apache/pdfbox/resources/afm/Courier-Oblique.afm",
-            "org/apache/pdfbox/resources/afm/Helvetica.afm",
-            "org/apache/pdfbox/resources/afm/Helvetica-Bold.afm",
-            "org/apache/pdfbox/resources/afm/Helvetica-BoldOblique.afm",
-            "org/apache/pdfbox/resources/afm/Helvetica-Oblique.afm",
-            "org/apache/pdfbox/resources/afm/MustRead.html",
-            "org/apache/pdfbox/resources/afm/Symbol.afm",
-            "org/apache/pdfbox/resources/afm/Times-Bold.afm",
-            "org/apache/pdfbox/resources/afm/Times-BoldItalic.afm",
-            "org/apache/pdfbox/resources/afm/Times-Italic.afm",
-            "org/apache/pdfbox/resources/afm/Times-Roman.afm",
-            "org/apache/pdfbox/resources/afm/ZapfDingbats.afm",
-            "org/apache/pdfbox/resources/glyphlist/additional.txt",
-            "org/apache/pdfbox/resources/glyphlist/glyphlist.txt",
-            "org/apache/pdfbox/resources/glyphlist/zapfdingbats.txt",
-            "org/apache/pdfbox/resources/icc/ISOcoated_v2_300_bas.icc",
-            "org/apache/pdfbox/resources/text/BidiMirroring.txt",
-            "org/apache/pdfbox/resources/ttf/LiberationSans-Regular.ttf"
-    };
-
-    private static final String[] RUNTIME_INITIALIZED_CLASSES = new String[] {
-            "org.apache.pdfbox.pdmodel.font.PDType1Font",
-            "org.apache.pdfbox.pdmodel.PDDocument",
-            "org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB",
-            "org.apache.pdfbox.pdmodel.graphics.color.PDDeviceGray",
-            "org.apache.pdfbox.pdmodel.encryption.StandardSecurityHandler"
-    };
-
     @BuildStep
     FeatureBuildItem feature() {
         return new FeatureBuildItem(FEATURE);
-    }
-
-    @BuildStep
-    NativeImageResourceBuildItem initResources(BuildProducer<NativeImageResourceBuildItem> nativeImageResource) {
-        return new NativeImageResourceBuildItem(RUNTIME_RESOURCES);
-    }
-
-    @BuildStep
-    void configureRuntimeInitializedClasses(BuildProducer<RuntimeInitializedClassBuildItem> runtimeInitializedClass) {
-        for (String className : RUNTIME_INITIALIZED_CLASSES) {
-            runtimeInitializedClass.produce(new RuntimeInitializedClassBuildItem(className));
-        }
-    }
-
-    @BuildStep
-    void registerForReflection(BuildProducer<ReflectiveClassBuildItem> reflectionClass) {
-        reflectionClass
-                .produce(ReflectiveClassBuildItem.builder(StandardSecurityHandler.class).constructors().methods().build());
-        reflectionClass.produce(ReflectiveClassBuildItem.builder(PDParentTreeValue.class).constructors().methods().build());
     }
 }

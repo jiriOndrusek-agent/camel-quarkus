@@ -58,6 +58,7 @@
         <module>language</module>
         <module>mail</module>
         <module>mongodb</module>
+        <module>pdfbox</module>
         <module>reactor-netty</module>
         <module>retrofit</module>
         <module>spring</module>

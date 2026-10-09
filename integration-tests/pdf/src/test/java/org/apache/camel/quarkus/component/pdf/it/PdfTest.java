@@ -37,6 +37,7 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -86,6 +87,20 @@ class PdfTest {
 
         assertTrue(pdfText.contains("content to be included in the created pdf document"));
         assertTrue(pdfText.contains("another line that should be appended"));
+    }
+
+    @Test
+    public void extractTextWithIdentityHFont() throws IOException {
+        // Type0 fonts with the Identity-H encoding, common in PDFs from office suites, need FontBox's predefined CMaps
+        try (InputStream pdf = PdfTest.class.getResourceAsStream("/identity-h.pdf")) {
+            RestAssured.given()
+                    .contentType(ContentType.BINARY)
+                    .body(pdf.readAllBytes())
+                    .post("/pdf/extractText")
+                    .then()
+                    .statusCode(200)
+                    .body(containsString("Hello Quarkus"));
+        }
     }
 
     @Test
@@ -170,5 +185,13 @@ class PdfTest {
                 .then()
                 .statusCode(200)
                 .body(containsString("content to be included in the created pdf document"));
+    }
+
+    @Test
+    public void cmykToRgb() {
+        RestAssured.get("/pdf/cmykToRgb")
+                .then()
+                .statusCode(200)
+                .body(matchesPattern("[0-9a-f]{6}"));
     }
 }
