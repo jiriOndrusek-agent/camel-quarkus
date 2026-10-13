@@ -92,6 +92,7 @@
         <commons-validator.version>${commons-validator-version}</commons-validator.version>
         <cxf.version>4.2.3</cxf.version><!-- @sync io.quarkiverse.cxf:quarkus-cxf-parent:${quarkiverse-cxf.version} prop:cxf.version -->
         <dfdl-scala.version>2.12.20</dfdl-scala.version>
+        <docling-java.version>${docling-java-version}</docling-java.version>
         <drill-jdbc-all.version>${apache-drill-version}</drill-jdbc-all.version>
         <dropwizard-metrics.version>${metrics-version}</dropwizard-metrics.version>
         <eclipse-transformer.version>0.5.0</eclipse-transformer.version>
@@ -124,7 +125,6 @@
         <ibm.mq.client.version>10.0.0.0</ibm.mq.client.version>
         <icu4j.version>${icu4j-version}</icu4j.version>
         <influxdb.version>${influx-java-driver-version}</influxdb.version>
-        <jackson-annotations.version>2.22</jackson-annotations.version><!-- @sync tools.jackson:jackson-bom:${jackson3.version} prop:jackson.version.annotations -->
         <jackson3.version>${jackson3-version}</jackson3.version>
         <jakarta.jms-api.version>${jakarta-jms-api-version}</jakarta.jms-api.version>
         <java-driver-query-builder.version>4.19.2</java-driver-query-builder.version><!-- @sync com.datastax.oss.quarkus:cassandra-quarkus-parent:${cassandra-quarkus.version} prop:java-driver.version -->
@@ -166,7 +166,6 @@
         <opencensus.version>0.31.0</opencensus.version><!-- Mess in Google cloud. Keep in sync with version used in com.google.http-client:google-http-client -->
         <opentelemetry-semconv-legacy.version>1.29.0-alpha</opentelemetry-semconv-legacy.version><!-- Alignment for camel-opentelemetry and google-pubsub -->
         <org.json.version>20240303</org.json.version><!-- Used by google-cloud-bigquery and com.ibm.mq.jakarta.client -->
-        <protobuf.version>4.35.1</protobuf.version><!-- @sync org.apache.camel:camel-dependencies:${camel.version} prop:protobuf-version -->
         <reactor-core.version>3.7.11</reactor-core.version><!-- @sync com.azure:azure-core:${azure-core.version} dep:io.projectreactor:reactor-core -->
         <reactor-netty.version>${reactor-netty-version}</reactor-netty.version>
         <retrofit.version>3.0.0</retrofit.version><!-- @sync org.kiwiproject:consul-client:${consul-client-version} prop:retrofit.version -->
@@ -251,7 +250,6 @@
         <cyberark-conjur-cli.container.image>mirror.gcr.io/cyberark/conjur-cli:9</cyberark-conjur-cli.container.image>
         <cyberark-nginx.container.image>mirror.gcr.io/nginx:1.30.3-alpine3.23-perl</cyberark-nginx.container.image>
         <db2.container.image>icr.io/db2_community/db2:12.1.5.0</db2.container.image>
-        <docling-java.version>${docling-java-version}</docling-java.version>
         <docling.container.image>quay.io/docling-project/docling-serve:v1.29.0</docling.container.image>
         <eclipse-mosquitto.container.image>mirror.gcr.io/eclipse-mosquitto:2.0.22</eclipse-mosquitto.container.image>
         <elasticsearch.container.image>mirror.gcr.io/elastic/elasticsearch:9.1.0</elasticsearch.container.image>
