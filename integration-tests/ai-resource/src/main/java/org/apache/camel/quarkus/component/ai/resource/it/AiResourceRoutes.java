@@ -17,8 +17,11 @@
 package org.apache.camel.quarkus.component.ai.resource.it;
 
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.model.dataformat.JsonLibrary;
 
 public class AiResourceRoutes extends RouteBuilder {
+    public static final String NOTES_DIR = "target/test-files";
+
     @Override
     public void configure() {
         from("ai-resource:appConfig?resourceUri=camel:///config/app.json&tags=config"
@@ -38,5 +41,17 @@ public class AiResourceRoutes extends RouteBuilder {
         from("ai-resource:failingResource?resourceUri=camel:///fail&tags=test"
                 + "&description=A resource that always fails")
                 .throwException(new IllegalStateException("Intentional failure"));
+
+        // the file is polled on every read; idempotent=false keeps it readable more than once
+        from("ai-resource:notes?resourceUri=camel:///notes.txt&tags=files"
+                + "&description=Notes read from a file"
+                + "&mimeType=text/plain")
+                .pollEnrich("file:" + NOTES_DIR + "?fileName=notes.txt&noop=true&idempotent=false", 1000);
+
+        from("ai-resource:latestOrder?resourceUri=camel:///orders/latest.json&tags=orders"
+                + "&description=Latest order"
+                + "&mimeType=application/json")
+                .setBody(constant(new Order("A-1", 2)))
+                .marshal().json(JsonLibrary.Jackson);
     }
 }

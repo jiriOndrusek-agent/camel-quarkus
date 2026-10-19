@@ -37,6 +37,8 @@ import io.quarkiverse.mcp.server.test.McpAssured.ToolInfo;
 import io.quarkiverse.mcp.server.test.McpAssured.ToolsPage;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
+import io.vertx.core.json.JsonObject;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -245,6 +247,38 @@ class McpServerTest {
     }
 
     @Test
+    void testReadFileResourceOnEveryRead() {
+        writeNotes("first version");
+        client().when()
+                .resourcesRead("camel:///notes.txt", response -> {
+                    TextResourceContents contents = response.contents().get(0).asText();
+                    assertThat(contents.mimeType()).isEqualTo("text/plain");
+                    assertThat(contents.text()).isEqualTo("first version");
+                })
+                .thenAssertResults();
+
+        // the route reads the file again, nothing is cached
+        writeNotes("second version");
+        client().when()
+                .resourcesRead("camel:///notes.txt",
+                        response -> assertThat(response.contents().get(0).asText().text()).isEqualTo("second version"))
+                .thenAssertResults();
+    }
+
+    @Test
+    void testReadJsonResourceMarshalledByJackson() {
+        client().when()
+                .resourcesRead("camel:///orders/latest.json", response -> {
+                    TextResourceContents contents = response.contents().get(0).asText();
+                    assertThat(contents.mimeType()).isEqualTo("application/json");
+                    JsonObject order = new JsonObject(contents.text());
+                    assertThat(order.getString("id")).isEqualTo("A-1");
+                    assertThat(order.getInteger("quantity")).isEqualTo(2);
+                })
+                .thenAssertResults();
+    }
+
+    @Test
     void testReadResourceErrorIsSanitized() {
         client().when()
                 .resourcesRead("camel:///fail")
@@ -324,6 +358,15 @@ class McpServerTest {
         RestAssured.given()
                 .when()
                 .post("/mcp-server/route/" + routeId + "/" + action)
+                .then()
+                .statusCode(204);
+    }
+
+    private static void writeNotes(String content) {
+        RestAssured.given()
+                .contentType(ContentType.TEXT)
+                .body(content)
+                .put("/mcp-server/notes")
                 .then()
                 .statusCode(204);
     }

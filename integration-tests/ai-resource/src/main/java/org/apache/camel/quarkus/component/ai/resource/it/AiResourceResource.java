@@ -16,12 +16,17 @@
  */
 package org.apache.camel.quarkus.component.ai.resource.it;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -96,6 +101,14 @@ public class AiResourceResource {
             return Response.status(500).entity(e.message()).build();
         }
         return Response.status(500).entity("Unknown result type").build();
+    }
+
+    @Path("/notes")
+    @PUT
+    @Consumes(MediaType.TEXT_PLAIN)
+    public void writeNotes(String content) throws IOException {
+        Files.createDirectories(Paths.get(AiResourceRoutes.NOTES_DIR));
+        Files.writeString(Paths.get(AiResourceRoutes.NOTES_DIR, "notes.txt"), content);
     }
 
     private AiResourceSpec findResource(String resourceName) {

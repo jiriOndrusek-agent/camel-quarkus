@@ -18,6 +18,7 @@ package org.apache.camel.quarkus.component.ai.resource.it;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.Matchers.containsString;
@@ -97,6 +98,31 @@ class AiResourceTest {
     }
 
     @Test
+    void readFileResourceOnEveryRead() {
+        writeNotes("first version");
+        RestAssured.get("/ai-resource/read/notes")
+                .then()
+                .statusCode(200)
+                .body(is("first version"));
+
+        // the route reads the file again, nothing is cached
+        writeNotes("second version");
+        RestAssured.get("/ai-resource/read/notes")
+                .then()
+                .statusCode(200)
+                .body(is("second version"));
+    }
+
+    @Test
+    void readJsonResourceMarshalledByJackson() {
+        RestAssured.get("/ai-resource/read/latestOrder")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body("id", is("A-1"), "quantity", is(2));
+    }
+
+    @Test
     void readFailingResource() {
         RestAssured.get("/ai-resource/read/failingResource")
                 .then()
@@ -108,5 +134,14 @@ class AiResourceTest {
         RestAssured.get("/ai-resource/read/nonExistent")
                 .then()
                 .statusCode(404);
+    }
+
+    private static void writeNotes(String content) {
+        RestAssured.given()
+                .contentType(ContentType.TEXT)
+                .body(content)
+                .put("/ai-resource/notes")
+                .then()
+                .statusCode(204);
     }
 }

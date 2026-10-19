@@ -16,14 +16,19 @@
  */
 package org.apache.camel.quarkus.component.mcp.server.it;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.model.dataformat.JsonLibrary;
 
 @ApplicationScoped
 public class McpServerRoutes extends RouteBuilder {
+
+    public static final String NOTES_DIR = "target/test-files";
 
     @Override
     public void configure() {
@@ -70,6 +75,16 @@ public class McpServerRoutes extends RouteBuilder {
         from("ai-resource:latest_report?resourceUri=camel:///reports/latest.pdf&tags=conformance"
                 + "&description=Latest report&mimeType=application/pdf")
                 .setBody(constant(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
+
+        // an InputStream body, as returned by producers such as aws2-s3 getObject; the file is opened on every read
+        from("ai-resource:notes?resourceUri=camel:///notes.txt&tags=conformance"
+                + "&description=Notes read from a file&mimeType=text/plain")
+                .process(e -> e.getMessage().setBody(Files.newInputStream(Paths.get(NOTES_DIR, "notes.txt"))));
+
+        from("ai-resource:latest_order?resourceUri=camel:///orders/latest.json&tags=conformance"
+                + "&description=Latest order&mimeType=application/json")
+                .setBody(constant(new Order("A-1", 2)))
+                .marshal().json(JsonLibrary.Jackson);
 
         from("ai-resource:fail_resource?resourceUri=camel:///fail&tags=conformance&description=Always fails")
                 .process(e -> {
