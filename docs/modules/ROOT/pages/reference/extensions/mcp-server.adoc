@@ -106,16 +106,18 @@ and clients are notified via `notifications/resources/list_changed`. A failed
 read returns a JSON-RPC error with the generic message `Resource read failed`;
 a read exceeding `quarkus.camel.mcp-server.resource-timeout` returns
 `Resource read timed out`. Resource names must be unique, as
-quarkus-mcp-server requires: a resource whose name is already taken is
-refused with an ERROR log, while its route keeps running.
+quarkus-mcp-server requires: a resource whose name is already taken, or
+whose uri is already used by a resource the application registers with
+quarkus-mcp-server, is refused with an ERROR log, while its route keeps
+running.
 
 [id="extensions-mcp-server-usage-combining-the-camel-and-quarkus-mcp-server-configuration"]
 === Combining the Camel and quarkus-mcp-server configuration
 
 The configuration is split by ownership: `quarkus.camel.mcp-server.*`
 decides *which tools and resources exist and how they execute* (identical
-semantics on every Camel runtime, except for the unique resource names
-required by quarkus-mcp-server), while `quarkus.mcp.server.*` decides
+semantics on every Camel runtime, except for the resource name and uri
+clashes refused by quarkus-mcp-server), while `quarkus.mcp.server.*` decides
 *how the server is exposed*. Both are set side by side in
 `application.properties`:
 

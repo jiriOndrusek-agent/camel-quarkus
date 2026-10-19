@@ -21,10 +21,10 @@ import java.util.List;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceResponse;
 import io.quarkiverse.mcp.server.TextResourceContents;
+import io.quarkus.arc.Arc;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
-import jakarta.inject.Inject;
 
 /**
  * A resource registered by the application itself through the quarkus-mcp-server {@link ResourceManager}, at the same
@@ -33,11 +33,11 @@ import jakarta.inject.Inject;
 @ApplicationScoped
 public class QuarkusDefinedResources {
 
-    @Inject
-    ResourceManager resourceManager;
-
     void registerResources(@Observes StartupEvent event) {
-        resourceManager.newResource("user_resource")
+        // looked up, not injected: any ResourceManager injection point makes quarkus-mcp-server advertise
+        // resources listChanged, which would hide a missing injection in QuarkusMcpServerEngineFactory
+        Arc.container().instance(ResourceManager.class).get()
+                .newResource("user_resource")
                 .setUri("camel:///user/clash")
                 .setDescription("Resource registered by the application")
                 .setHandler(arguments -> new ResourceResponse(
