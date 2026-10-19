@@ -18,8 +18,6 @@ package org.apache.camel.quarkus.component.wasm.deployment;
 
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
-import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
-import org.apache.camel.wasm.WasmSupport.Wrapper;
 
 class WasmProcessor {
 
@@ -28,10 +26,5 @@ class WasmProcessor {
     @BuildStep
     FeatureBuildItem feature() {
         return new FeatureBuildItem(FEATURE);
-    }
-
-    @BuildStep
-    ReflectiveClassBuildItem registerForReflection() {
-        return ReflectiveClassBuildItem.builder(Wrapper.class).methods(false).fields(true).build();
     }
 }

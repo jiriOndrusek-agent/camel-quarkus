@@ -40,18 +40,6 @@ public class WasmRoutes extends RouteBuilder {
 
         from("direct:executeFunctionError")
                 .toD("wasm:process_err?module=wasm/modules/functions.wasm");
-
-        from("direct:executeFunctionViaLanguageFromClasspath")
-                .transform()
-                .wasm("transform", "wasm/modules/functions.wasm");
-
-        from("direct:executeFunctionViaLanguageFromFile")
-                .transform()
-                .wasm("transform", "file:target/wasm/modules/functions.wasm");
-
-        from("direct:executeFunctionViaLanguageError")
-                .transform()
-                .wasm("transform_err", "wasm/modules/functions.wasm");
     }
 
     static void copyFunctionsToFilesystem() throws IOException {

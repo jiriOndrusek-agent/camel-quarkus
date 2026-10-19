@@ -71,14 +71,10 @@ class WasmTest {
     static Set<String> executeFunctionUris() {
         return Set.of(
                 "executeFunctionFromClasspath",
-                "executeFunctionFromFile",
-                "executeFunctionViaLanguageFromClasspath",
-                "executeFunctionViaLanguageFromFile");
+                "executeFunctionFromFile");
     }
 
     static Set<String> executeFunctionErrorUris() {
-        return Set.of(
-                "executeFunctionError",
-                "executeFunctionViaLanguageError");
+        return Set.of("executeFunctionError");
     }
 }
