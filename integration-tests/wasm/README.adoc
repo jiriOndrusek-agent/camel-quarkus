@@ -1,13 +1,20 @@
-== Recompiling the test functions
+== Recompiling the test modules
+
+The test modules in `src/main/resources/wasm/modules` are WASI Preview 1 command modules, built from the Rust programs in `rust`:
+
+* `upper.wasm` copies its standard input to its standard output in upper case
+* `error.wasm` writes `this is an error` to its standard error and exits with code 3
 
 First install the Rust toolchain:
 
 https://rustup.rs/
 
-Then compile functions.wasm:
+Then compile the modules:
 
 [source,shell]
 ----
 cd rust
 ./build.sh
 ----
+
+`rust/rust-toolchain.toml` pins the Rust version, so that the build reproduces the committed `.wasm` files byte for byte.

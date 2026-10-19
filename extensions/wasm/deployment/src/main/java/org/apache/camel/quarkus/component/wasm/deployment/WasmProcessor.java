@@ -18,6 +18,8 @@ package org.apache.camel.quarkus.component.wasm.deployment;
 
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
+import org.apache.camel.wasm.WasiCommand;
 
 class WasmProcessor {
 
@@ -26,5 +28,11 @@ class WasmProcessor {
     @BuildStep
     FeatureBuildItem feature() {
         return new FeatureBuildItem(FEATURE);
+    }
+
+    @BuildStep
+    RuntimeInitializedClassBuildItem runtimeInitializedClasses() {
+        // Holds a static SecureRandom, which must not be created at build time
+        return new RuntimeInitializedClassBuildItem(WasiCommand.class.getName());
     }
 }

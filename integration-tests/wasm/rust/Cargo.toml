@@ -16,22 +16,21 @@
 #
 
 [package]
-name    = "functions"
+name    = "modules"
 version = "0.1.0"
 authors = ["camel.apache.org"]
 edition = "2024"
 
-[lib]
-crate-type = ["cdylib"]
-path = "functions.rs"
+# Copies standard input to standard output in upper case
+[[bin]]
+name = "upper"
+path = "upper.rs"
 
-[dependencies]
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-base64 = "0.21.7"
-base64-serde = "0.7.0"
+# Writes "this is an error" to standard error and exits with code 3
+[[bin]]
+name = "error"
+path = "error.rs"
 
 [profile.release]
-opt-level = 0
-lto = "off"
-codegen-units = 1
+opt-level = "s"
+strip = true

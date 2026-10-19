@@ -18,8 +18,9 @@
 
 set -euxo pipefail
 
-rustup target add wasm32-unknown-unknown
+# Installs the toolchain and target of rust-toolchain.toml, if missing
+rustup toolchain install
 
-cargo build --target wasm32-unknown-unknown --release
+cargo build --target wasm32-wasip1 --release
 
-cp target/wasm32-unknown-unknown/release/functions.wasm ../src/test/resources
+cp target/wasm32-wasip1/release/upper.wasm target/wasm32-wasip1/release/error.wasm ../src/main/resources/wasm/modules
