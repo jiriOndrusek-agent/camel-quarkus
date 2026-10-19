@@ -102,5 +102,12 @@ public class McpServerRoutes extends RouteBuilder {
         from("ai-resource:same_name?resourceUri=camel:///same/second&tags=conformance"
                 + "&description=Name already taken, must be refused")
                 .setBody(constant("second"));
+
+        // the uri is taken by the resource registered in QuarkusDefinedResources, so it is refused once started
+        from("ai-resource:clashing_resource?resourceUri=camel:///user/clash&tags=conformance"
+                + "&description=Uri already taken by an application resource, must be refused")
+                .routeId("clashing-resource-route")
+                .autoStartup(false)
+                .setBody(constant("camel"));
     }
 }

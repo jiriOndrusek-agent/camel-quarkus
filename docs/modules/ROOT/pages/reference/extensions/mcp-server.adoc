@@ -114,7 +114,8 @@ refused with an ERROR log, while its route keeps running.
 
 The configuration is split by ownership: `quarkus.camel.mcp-server.*`
 decides *which tools and resources exist and how they execute* (identical
-semantics on every Camel runtime), while `quarkus.mcp.server.*` decides
+semantics on every Camel runtime, except for the unique resource names
+required by quarkus-mcp-server), while `quarkus.mcp.server.*` decides
 *how the server is exposed*. Both are set side by side in
 `application.properties`:
 

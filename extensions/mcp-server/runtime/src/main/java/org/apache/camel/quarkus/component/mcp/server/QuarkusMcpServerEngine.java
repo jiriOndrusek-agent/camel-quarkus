@@ -20,6 +20,8 @@ import java.lang.reflect.Type;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
@@ -56,6 +58,8 @@ public class QuarkusMcpServerEngine extends ServiceSupport implements McpServerE
 
     private final ToolManager toolManager;
     private final ResourceManager resourceManager;
+    // uris of the resources registered by this engine; a refused resource's uri may belong to an application resource
+    private final Set<String> registeredResourceUris = ConcurrentHashMap.newKeySet();
     private CamelContext camelContext;
 
     public QuarkusMcpServerEngine(ToolManager toolManager, ResourceManager resourceManager) {
@@ -144,11 +148,16 @@ public class QuarkusMcpServerEngine extends ServiceSupport implements McpServerE
                     resource.uri(), e.getMessage());
             return;
         }
+        registeredResourceUris.add(resource.uri());
         LOG.debug("MCP resource added: {}", resource.uri());
     }
 
     @Override
     public void resourceRemoved(String resourceUri) {
+        if (!registeredResourceUris.remove(resourceUri)) {
+            // refused in resourceAdded: removing by uri would delete another resource with the same uri
+            return;
+        }
         try {
             resourceManager.removeResource(resourceUri);
             LOG.debug("MCP resource removed: {}", resourceUri);

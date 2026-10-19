@@ -287,6 +287,21 @@ class McpServerTest {
     }
 
     @Test
+    void testStoppingRefusedResourceKeepsApplicationResource() {
+        // the route is refused, its uri is taken by a resource the application registered itself
+        controlRoute("clashing-resource-route", "start");
+        assertThat(routeStatus("clashing-resource-route")).isEqualTo("Started");
+        controlRoute("clashing-resource-route", "stop");
+        assertThat(routeStatus("clashing-resource-route")).isEqualTo("Stopped");
+
+        client().when()
+                .resourcesList(page -> assertThat(resourceUris(page)).contains("camel:///user/clash"))
+                .resourcesRead("camel:///user/clash",
+                        response -> assertThat(response.contents().get(0).asText().text()).isEqualTo("user"))
+                .thenAssertResults();
+    }
+
+    @Test
     void testResourcesListReflectsRouteStopAndStart() {
         client().when()
                 .resourcesList(page -> assertThat(resourceUris(page)).contains("camel:///config/app.json"))
