@@ -87,7 +87,7 @@
             <id>fips</id>
             <activation>
                 <property>
-                    <name>fips</name>
+                    <name>fips.enabled</name>
                 </property>
             </activation>
             <dependencies>
@@ -117,6 +117,20 @@
                     <groupId>io.quarkiverse.cxf</groupId>
                     <artifactId>quarkus-cxf-test-util-internal</artifactId>
                     <exclusions>
+                        <exclusion>
+                            <groupId>org.bouncycastle</groupId>
+                            <artifactId>bc-fips</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+                <dependency>
+                    <groupId>io.quarkiverse.cxf</groupId>
+                    <artifactId>quarkus-cxf-services-sts</artifactId>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>com.google.code.findbugs</groupId>
+                            <artifactId>jsr305</artifactId>
+                        </exclusion>
                         <exclusion>
                             <groupId>org.bouncycastle</groupId>
                             <artifactId>bc-fips</artifactId>

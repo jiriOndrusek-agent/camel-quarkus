@@ -92,7 +92,7 @@
             <id>fips</id>
             <activation>
                 <property>
-                    <name>fips</name>
+                    <name>fips.enabled</name>
                 </property>
             </activation>
             <dependencies>
