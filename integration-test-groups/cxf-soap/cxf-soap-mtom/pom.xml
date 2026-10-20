@@ -64,6 +64,28 @@
 
     <profiles>
         <profile>
+            <id>fips</id>
+            <activation>
+                <property>
+                    <name>fips</name>
+                </property>
+            </activation>
+            <dependencies>
+                <!-- The fips profile of cxf-parent (activated by -Dfips.enabled) adds bc-fips to all CXF modules. -->
+                <!-- It would clash with quarkus-cxf-bc-stub, so keep it out of the tests. -->
+                <dependency>
+                    <groupId>org.apache.camel.quarkus</groupId>
+                    <artifactId>camel-quarkus-cxf-soap</artifactId>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.bouncycastle</groupId>
+                            <artifactId>bc-fips</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
             <id>native</id>
             <activation>
                 <property>
