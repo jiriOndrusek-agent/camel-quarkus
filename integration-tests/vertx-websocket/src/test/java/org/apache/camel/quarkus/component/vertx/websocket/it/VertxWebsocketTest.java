@@ -33,6 +33,7 @@ import io.vertx.core.http.WebSocketClientOptions;
 import io.vertx.core.http.WebSocketConnectOptions;
 import org.apache.camel.component.vertx.websocket.VertxWebsocketConstants;
 import org.awaitility.Awaitility;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -68,6 +69,8 @@ class VertxWebsocketTest {
     @TestHTTPResource("/origin/restricted")
     URI originRestricted;
 
+    // TODO(#9348): re-enable when Camel Quarkus moves to Quarkus 4.x
+    @Disabled("Needs Quarkus 4.x (Vert.x 5), see #9348")
     @Test
     public void testEchoWithShortFormUri() throws Exception {
         String message = "From Short From URI";
@@ -93,6 +96,8 @@ class VertxWebsocketTest {
                         "Invalid host/port " + hostPort + ".*can only be configured as (localhost|0.0.0.0):" + root.getPort()));
     }
 
+    // TODO(#9348): re-enable when Camel Quarkus moves to Quarkus 4.x
+    @Disabled("Needs Quarkus 4.x (Vert.x 5), see #9348")
     @Test
     public void testRootPath() throws Exception {
         String message = "From Root Path";
@@ -217,6 +222,8 @@ class VertxWebsocketTest {
         }
     }
 
+    // TODO(#9348): re-enable when Camel Quarkus moves to Quarkus 4.x
+    @Disabled("Needs Quarkus 4.x (Vert.x 5), see #9348")
     @Test
     public void sendToSpecificPeer() throws Exception {
         String message = "Message Broadcast To A Specific Peer";
@@ -252,6 +259,8 @@ class VertxWebsocketTest {
         }
     }
 
+    // TODO(#9348): re-enable when Camel Quarkus moves to Quarkus 4.x
+    @Disabled("Needs Quarkus 4.x (Vert.x 5), see #9348")
     @Test
     public void consumeAsClient() throws Exception {
         String message = "From Consume As Client";
@@ -277,6 +286,8 @@ class VertxWebsocketTest {
         }
     }
 
+    // TODO(#9348): re-enable when Camel Quarkus moves to Quarkus 4.x
+    @Disabled("Needs Quarkus 4.x (Vert.x 5), see #9348")
     @Test
     public void parameterizedPath() throws Exception {
         URI uri = URI.create(parameterizedPath.toString() + "/Hello/World");
@@ -291,6 +302,8 @@ class VertxWebsocketTest {
         }
     }
 
+    // TODO(#9348): re-enable when Camel Quarkus moves to Quarkus 4.x
+    @Disabled("Needs Quarkus 4.x (Vert.x 5), see #9348")
     @Test
     public void queryParameters() throws Exception {
         URI uri = URI.create(queryParamsPath.toString() + "?paramA=Hello&paramB=World");
@@ -305,6 +318,8 @@ class VertxWebsocketTest {
         }
     }
 
+    // TODO(#9348): re-enable when Camel Quarkus moves to Quarkus 4.x
+    @Disabled("Needs Quarkus 4.x (Vert.x 5), see #9348")
     @Test
     public void events() throws Exception {
         try (WebSocketConnection connection = new WebSocketConnection(events, "Test")) {

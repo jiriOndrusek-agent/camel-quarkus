@@ -428,8 +428,12 @@ jobs:
               EXAMPLES_BRANCH=${GITHUB_BASE_REF}
           fi
 
+          # TODO(#9348): build these examples again when Camel Quarkus moves to Quarkus 4.x (Vert.x 5).
+          # They use platform-http, rest, lra or vertx-websocket, whose native image needs Vert.x 5
+          EXAMPLES_IGNORE=artemis-elasticsearch,cxf-soap,data-extract-langchain4j,fhir,http-log,http-pqc,jdbc-datasource,jms-jpa,jpa-idempotent-repository,jta-jpa,message-bridge,observability,openapi-contract-first,platform-http-security-keycloak,rest-json,rest-keycloak-soap-jms,saga,vertx-websocket-chat
+
           sudo apt install groovy -y --no-install-recommends
-          EXAMPLES_MATRIX=$(groovy -DEXAMPLES_BRANCH=${EXAMPLES_BRANCH} tooling/scripts/generate-examples-matrix.groovy)
+          EXAMPLES_MATRIX=$(groovy -DEXAMPLES_BRANCH=${EXAMPLES_BRANCH} -DEXAMPLES_IGNORE=${EXAMPLES_IGNORE} tooling/scripts/generate-examples-matrix.groovy)
           echo "examples-matrix=${EXAMPLES_MATRIX}" >> $GITHUB_OUTPUT
 
   native-tests:
