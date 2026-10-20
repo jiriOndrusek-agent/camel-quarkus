@@ -70,6 +70,63 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <!-- The fips profile of cxf-parent (activated by -Dfips.enabled) adds bc-fips to all CXF modules. -->
+            <!-- It would clash with quarkus-cxf-bc-stub, so keep it out of the tests. -->
+            <dependency>
+                <groupId>org.apache.camel.quarkus</groupId>
+                <artifactId>camel-quarkus-cxf-soap</artifactId>
+                <version>${camel-quarkus.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.bouncycastle</groupId>
+                        <artifactId>bc-fips</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>io.quarkiverse.cxf</groupId>
+                <artifactId>quarkus-cxf-rt-features-logging</artifactId>
+                <version>${quarkiverse-cxf.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.bouncycastle</groupId>
+                        <artifactId>bc-fips</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>io.quarkiverse.cxf</groupId>
+                <artifactId>quarkus-cxf-rt-features-metrics</artifactId>
+                <version>${quarkiverse-cxf.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.bouncycastle</groupId>
+                        <artifactId>bc-fips</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>io.quarkiverse.cxf</groupId>
+                <artifactId>quarkus-cxf-test-util</artifactId>
+                <version>${quarkiverse-cxf.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.bouncycastle</groupId>
+                        <artifactId>bc-fips</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>io.quarkiverse.cxf</groupId>
+                <artifactId>quarkus-cxf-test-util-internal</artifactId>
+                <version>${quarkiverse-cxf.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.bouncycastle</groupId>
+                        <artifactId>bc-fips</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

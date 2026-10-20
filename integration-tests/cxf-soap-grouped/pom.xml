@@ -54,6 +54,10 @@
                     <groupId>com.google.code.findbugs</groupId>
                     <artifactId>jsr305</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bc-fips</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
@@ -63,6 +67,10 @@
                 <exclusion>
                     <groupId>com.google.code.findbugs</groupId>
                     <artifactId>jsr305</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bc-fips</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
