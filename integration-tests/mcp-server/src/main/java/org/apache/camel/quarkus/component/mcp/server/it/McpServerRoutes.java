@@ -87,6 +87,12 @@ public class McpServerRoutes extends RouteBuilder {
                 .autoStartup(false)
                 .setBody(constant("camel"));
 
+        // the name is taken by the annotated tool in QuarkusDefinedTools; started with the application, so it is
+        // refused while the MCP bridge starts, which must not fail the application startup
+        from("ai-tool:add_numbers?tags=conformance"
+                + "&description=Name already taken by an annotated tool, must be refused")
+                .setBody(constant("camel"));
+
         from("ai-resource:app_config?resourceUri=camel:///config/app.json&tags=conformance"
                 + "&description=Application configuration&mimeType=application/json&title=App config")
                 .routeId("app-config-route")

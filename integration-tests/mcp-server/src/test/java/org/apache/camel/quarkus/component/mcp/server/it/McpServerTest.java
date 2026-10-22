@@ -175,7 +175,7 @@ class McpServerTest {
 
     @Test
     void testQuarkusAnnotatedToolsCoexistWithCamelTools() {
-        // both tool sources are served by the same MCP server
+        // both tool sources are served by the same MCP server; the add_numbers ai-tool route is refused
         client().when()
                 .toolsList(page -> assertThat(toolNames(page)).contains("add_numbers", "say_hello"))
                 .toolsCall("add_numbers", Map.of("a", 17, "b", 25), response -> {
