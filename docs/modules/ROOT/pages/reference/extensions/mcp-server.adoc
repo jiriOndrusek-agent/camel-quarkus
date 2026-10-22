@@ -325,14 +325,14 @@ are never exposed. When not set, nothing is exposed.
 | `string`
 | 
 
-a|icon:lock[title=Fixed at build time] [[quarkus-camel-mcp-server-tool-timeout]]`link:#quarkus-camel-mcp-server-tool-timeout[quarkus.camel.mcp-server.tool-timeout]`
+a| [[quarkus-camel-mcp-server-tool-timeout]]`link:#quarkus-camel-mcp-server-tool-timeout[quarkus.camel.mcp-server.tool-timeout]`
 
 Per-call tool execution timeout in milliseconds. A call exceeding the timeout returns an error result to the
 MCP client; the underlying route keeps running until it completes on its own.
 | `long`
 | `20000`
 
-a|icon:lock[title=Fixed at build time] [[quarkus-camel-mcp-server-resource-timeout]]`link:#quarkus-camel-mcp-server-resource-timeout[quarkus.camel.mcp-server.resource-timeout]`
+a| [[quarkus-camel-mcp-server-resource-timeout]]`link:#quarkus-camel-mcp-server-resource-timeout[quarkus.camel.mcp-server.resource-timeout]`
 
 Per-read resource execution timeout in milliseconds. A read exceeding the timeout returns an error to the MCP
 client; the underlying route keeps running until it completes on its own.
