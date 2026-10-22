@@ -16,6 +16,7 @@
  */
 package org.apache.camel.quarkus.component.mcp.server.it;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
@@ -29,6 +30,9 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 public class McpServerRoutes extends RouteBuilder {
 
     public static final String NOTES_DIR = "target/test-files";
+    // over 57 bytes, so that a MIME Base64 encoder would break the line
+    public static final byte[] REPORT = "%PDF-1.7 latest report, long enough to span more than one MIME Base64 line"
+            .getBytes(StandardCharsets.US_ASCII);
 
     @Override
     public void configure() {
@@ -90,7 +94,7 @@ public class McpServerRoutes extends RouteBuilder {
 
         from("ai-resource:latest_report?resourceUri=camel:///reports/latest.pdf&tags=conformance"
                 + "&description=Latest report&mimeType=application/pdf")
-                .setBody(constant(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
+                .setBody(constant(REPORT));
 
         // an InputStream body, as returned by producers such as aws2-s3 getObject; the file is opened on every read
         from("ai-resource:notes?resourceUri=camel:///notes.txt&tags=conformance"

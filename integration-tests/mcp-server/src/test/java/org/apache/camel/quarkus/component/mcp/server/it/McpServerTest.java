@@ -304,7 +304,8 @@ class McpServerTest {
                     assertThat(response.contents()).hasSize(1);
                     BlobResourceContents contents = response.contents().get(0).asBlob();
                     assertThat(contents.mimeType()).isEqualTo("application/pdf");
-                    assertThat(Base64.getDecoder().decode(contents.blob())).isEqualTo(new byte[] { 0x25, 0x50, 0x44, 0x46 });
+                    // the basic decoder rejects the line breaks of a MIME encoder
+                    assertThat(Base64.getDecoder().decode(contents.blob())).isEqualTo(McpServerRoutes.REPORT);
                 })
                 .thenAssertResults();
     }
