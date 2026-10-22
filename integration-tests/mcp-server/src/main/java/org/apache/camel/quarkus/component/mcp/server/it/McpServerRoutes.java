@@ -76,6 +76,13 @@ public class McpServerRoutes extends RouteBuilder {
                 + "&outputParameter.unit=string&outputParameter.unit.enum=celsius,fahrenheit")
                 .setBody(constant("{\"temperature\":21.5,\"unit\":\"celsius\"}"));
 
+        // the name is taken by the tool registered in QuarkusDefinedTools, so it is refused once started
+        from("ai-tool:user_tool?tags=conformance"
+                + "&description=Name already taken by an application tool, must be refused")
+                .routeId("clashing-tool-route")
+                .autoStartup(false)
+                .setBody(constant("camel"));
+
         from("ai-resource:app_config?resourceUri=camel:///config/app.json&tags=conformance"
                 + "&description=Application configuration&mimeType=application/json&title=App config")
                 .routeId("app-config-route")

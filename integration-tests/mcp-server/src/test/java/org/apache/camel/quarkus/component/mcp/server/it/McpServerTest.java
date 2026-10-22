@@ -219,6 +219,19 @@ class McpServerTest {
     }
 
     @Test
+    void testStoppingRefusedToolKeepsApplicationTool() {
+        // the route is refused, its name is taken by a tool the application registered itself
+        controlRoute("clashing-tool-route", "start");
+        assertThat(routeStatus("clashing-tool-route")).isEqualTo("Started");
+        controlRoute("clashing-tool-route", "stop");
+        assertThat(routeStatus("clashing-tool-route")).isEqualTo("Stopped");
+
+        client().when()
+                .toolsCall("user_tool", response -> assertThat(textOf(response)).isEqualTo("user"))
+                .thenAssertResults();
+    }
+
+    @Test
     void testToolsListReflectsRouteStopAndStart() {
         client().when()
                 .toolsList(page -> assertThat(toolNames(page)).contains("say_hello"))
