@@ -56,6 +56,7 @@ import static org.awaitility.Awaitility.await;
 class McpServerTest {
 
     private McpStreamableTestClient client;
+    private McpStreamableTestClient otherClient;
 
     private McpStreamableTestClient client() {
         if (client == null) {
@@ -68,11 +69,28 @@ class McpServerTest {
         return client;
     }
 
+    // a client of the other MCP server configured in application.properties
+    private McpStreamableTestClient otherClient() {
+        if (otherClient == null) {
+            otherClient = McpAssured.newStreamableClient()
+                    .setBaseUri(URI.create("http://localhost:%d".formatted(
+                            ConfigProvider.getConfig().getValue("quarkus.http.test-port", Integer.class))))
+                    .setMcpPath("/other-mcp")
+                    .build()
+                    .connect();
+        }
+        return otherClient;
+    }
+
     @AfterEach
     void closeClient() {
         if (client != null) {
             client.disconnect();
             client = null;
+        }
+        if (otherClient != null) {
+            otherClient.disconnect();
+            otherClient = null;
         }
     }
 
@@ -229,6 +247,19 @@ class McpServerTest {
         client().when()
                 .toolsCall("user_tool", response -> assertThat(textOf(response)).isEqualTo("user"))
                 .thenAssertResults();
+    }
+
+    @Test
+    void testStoppingToolRouteKeepsToolOfOtherServer() {
+        // the application registered a tool with the same name on another MCP server
+        controlRoute("say-hello-route", "stop");
+        try {
+            otherClient().when()
+                    .toolsCall("say_hello", response -> assertThat(textOf(response)).isEqualTo("other"))
+                    .thenAssertResults();
+        } finally {
+            controlRoute("say-hello-route", "start");
+        }
     }
 
     @Test
@@ -403,18 +434,14 @@ class McpServerTest {
     void testStoppingResourceRouteKeepsResourceOfOtherServer() {
         // the application registered a resource at the same uri on another MCP server
         controlRoute("app-config-route", "stop");
-        McpStreamableTestClient other = McpAssured.newStreamableClient()
-                .setBaseUri(URI.create("http://localhost:%d".formatted(
-                        ConfigProvider.getConfig().getValue("quarkus.http.test-port", Integer.class))))
-                .setMcpPath("/other-mcp")
-                .build()
-                .connect();
-        other.when()
-                .resourcesRead("camel:///config/app.json",
-                        response -> assertThat(response.contents().get(0).asText().text()).isEqualTo("other"))
-                .thenAssertResults();
-        other.disconnect();
-        controlRoute("app-config-route", "start");
+        try {
+            otherClient().when()
+                    .resourcesRead("camel:///config/app.json",
+                            response -> assertThat(response.contents().get(0).asText().text()).isEqualTo("other"))
+                    .thenAssertResults();
+        } finally {
+            controlRoute("app-config-route", "start");
+        }
     }
 
     @Test

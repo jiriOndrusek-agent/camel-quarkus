@@ -25,9 +25,9 @@ import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.event.Observes;
 
 /**
- * A plain quarkus-mcp-server annotated tool living on the same MCP server as the Camel ai-tool routes, and a tool
- * registered through the quarkus-mcp-server {@link ToolManager}, under the same name as the clashing-tool-route
- * ai-tool route.
+ * A plain quarkus-mcp-server annotated tool living on the same MCP server as the Camel ai-tool routes, and tools
+ * registered through the quarkus-mcp-server {@link ToolManager}: one under the same name as the clashing-tool-route
+ * ai-tool route, and one under the name of the say-hello-route ai-tool route, on another MCP server.
  */
 public class QuarkusDefinedTools {
 
@@ -40,10 +40,15 @@ public class QuarkusDefinedTools {
 
     void registerTools(@Observes StartupEvent event) {
         // looked up, not injected, as in QuarkusDefinedResources
-        Arc.container().instance(ToolManager.class).get()
-                .newTool("user_tool")
+        ToolManager toolManager = Arc.container().instance(ToolManager.class).get();
+        toolManager.newTool("user_tool")
                 .setDescription("Tool registered by the application")
                 .setHandler(arguments -> ToolResponse.success("user"))
+                .register();
+        toolManager.newTool("say_hello")
+                .setServerName("other")
+                .setDescription("Tool registered by the application on another server")
+                .setHandler(arguments -> ToolResponse.success("other"))
                 .register();
     }
 }
