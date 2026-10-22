@@ -44,7 +44,7 @@ public class McpServerRoutes extends RouteBuilder {
 
         // between tool-timeout and resource-timeout, like delayed_resource
         from("ai-tool:slow_tool?tags=conformance&description=Exceeds the tool timeout")
-                .delay(3000)
+                .delay(4000)
                 .setBody(constant("done"));
 
         from("ai-tool:hidden_tool?description=Untagged tool, must not be exposed")
@@ -109,7 +109,7 @@ public class McpServerRoutes extends RouteBuilder {
 
         from("ai-resource:slow_resource?resourceUri=camel:///slow&tags=conformance"
                 + "&description=Exceeds the resource timeout")
-                .delay(6000)
+                .delay(8000)
                 .setBody(constant("done"));
 
         // between tool-timeout and resource-timeout, like slow_tool
