@@ -386,6 +386,24 @@ class McpServerTest {
     }
 
     @Test
+    void testStoppingResourceRouteKeepsResourceOfOtherServer() {
+        // the application registered a resource at the same uri on another MCP server
+        controlRoute("app-config-route", "stop");
+        McpStreamableTestClient other = McpAssured.newStreamableClient()
+                .setBaseUri(URI.create("http://localhost:%d".formatted(
+                        ConfigProvider.getConfig().getValue("quarkus.http.test-port", Integer.class))))
+                .setMcpPath("/other-mcp")
+                .build()
+                .connect();
+        other.when()
+                .resourcesRead("camel:///config/app.json",
+                        response -> assertThat(response.contents().get(0).asText().text()).isEqualTo("other"))
+                .thenAssertResults();
+        other.disconnect();
+        controlRoute("app-config-route", "start");
+    }
+
+    @Test
     void testResourcesListReflectsRouteStopAndStart() {
         client().when()
                 .resourcesList(page -> assertThat(resourceUris(page)).contains("camel:///config/app.json"))

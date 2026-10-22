@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import io.quarkiverse.mcp.server.BlobResourceContents;
 import io.quarkiverse.mcp.server.JsonRpcErrorCodes;
 import io.quarkiverse.mcp.server.McpException;
+import io.quarkiverse.mcp.server.McpServer;
 import io.quarkiverse.mcp.server.ResourceContents;
 import io.quarkiverse.mcp.server.ResourceManager;
 import io.quarkiverse.mcp.server.ResourceResponse;
@@ -164,7 +165,8 @@ public class QuarkusMcpServerEngine extends ServiceSupport implements McpServerE
             return;
         }
         try {
-            resourceManager.removeResource(resourceUri);
+            // only from the default server, where resourceAdded registered it
+            resourceManager.removeResource(resourceUri, McpServer.DEFAULT);
             LOG.debug("MCP resource removed: {}", resourceUri);
         } catch (Exception e) {
             LOG.debug("Failed to remove MCP resource {}: {}", resourceUri, e.getMessage());
