@@ -35,13 +35,17 @@ import jakarta.persistence.EntityManagerFactory;
 import org.apache.camel.component.jpa.JpaComponent;
 import org.apache.camel.component.jpa.JpaEndpoint;
 import org.apache.camel.component.jpa.TransactionStrategy;
+import org.apache.camel.processor.idempotent.jpa.JpaMessageIdRepository;
+import org.apache.camel.processor.keyvalue.jpa.JpaKeyValueRepository;
 import org.apache.camel.quarkus.component.jpa.CamelJpaProducer;
 import org.apache.camel.quarkus.component.jpa.CamelJpaRecorder;
+import org.apache.camel.quarkus.component.jpa.QuarkusTransactionStrategy;
 import org.apache.camel.quarkus.core.deployment.spi.CamelBeanQualifierResolverBuildItem;
 import org.apache.camel.quarkus.core.deployment.spi.CamelRuntimeBeanBuildItem;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 
 class JpaProcessor {
 
@@ -196,5 +200,48 @@ class JpaProcessor {
                     };
                 })
                 .build();
+    }
+
+    @BuildStep
+    void transformJpaRepositories(BuildProducer<BytecodeTransformerBuildItem> bytecodeTransformers) {
+        // The repositories create a DefaultTransactionStrategy if none is set, but that class is removed.
+        // Replace new DefaultTransactionStrategy(camelContext, entityManagerFactory) with new QuarkusTransactionStrategy()
+        String defaultTransactionStrategy = "org/apache/camel/component/jpa/DefaultTransactionStrategy";
+        String quarkusTransactionStrategy = Type.getInternalName(QuarkusTransactionStrategy.class);
+        for (Class<?> repository : List.of(JpaMessageIdRepository.class, JpaKeyValueRepository.class)) {
+            bytecodeTransformers.produce(new BytecodeTransformerBuildItem.Builder()
+                    .setClassToTransform(repository.getName())
+                    .setCacheable(true)
+                    .setVisitorFunction((className, classVisitor) -> {
+                        return new ClassVisitor(Gizmo.ASM_API_VERSION, classVisitor) {
+                            @Override
+                            public MethodVisitor visitMethod(int access, String name, String descriptor, String signature,
+                                    String[] exceptions) {
+                                MethodVisitor visitor = super.visitMethod(access, name, descriptor, signature, exceptions);
+                                return new MethodVisitor(Gizmo.ASM_API_VERSION, visitor) {
+                                    @Override
+                                    public void visitTypeInsn(int opcode, String type) {
+                                        super.visitTypeInsn(opcode,
+                                                type.equals(defaultTransactionStrategy) ? quarkusTransactionStrategy : type);
+                                    }
+
+                                    @Override
+                                    public void visitMethodInsn(int opcode, String owner, String name, String descriptor,
+                                            boolean isInterface) {
+                                        if (owner.equals(defaultTransactionStrategy) && name.equals("<init>")) {
+                                            /* drop the CamelContext and EntityManagerFactory arguments */
+                                            super.visitInsn(Opcodes.POP2);
+                                            super.visitMethodInsn(Opcodes.INVOKESPECIAL, quarkusTransactionStrategy, name,
+                                                    "()V", false);
+                                        } else {
+                                            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
+                                        }
+                                    }
+                                };
+                            }
+                        };
+                    })
+                    .build());
+        }
     }
 }
