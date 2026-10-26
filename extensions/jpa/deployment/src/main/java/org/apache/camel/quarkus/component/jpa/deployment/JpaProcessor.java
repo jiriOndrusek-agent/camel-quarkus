@@ -27,21 +27,22 @@ import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.BytecodeTransformerBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.RemovedResourceBuildItem;
-import io.quarkus.gizmo.FieldDescriptor;
 import io.quarkus.gizmo.Gizmo;
 import io.quarkus.hibernate.orm.deployment.PersistenceUnitDescriptorBuildItem;
 import io.quarkus.maven.dependency.ArtifactKey;
 import jakarta.persistence.EntityManagerFactory;
 import org.apache.camel.component.jpa.JpaComponent;
 import org.apache.camel.component.jpa.JpaEndpoint;
-import org.apache.camel.component.jpa.TransactionStrategy;
+import org.apache.camel.component.jpa.JpaHelper;
 import org.apache.camel.quarkus.component.jpa.CamelJpaProducer;
 import org.apache.camel.quarkus.component.jpa.CamelJpaRecorder;
+import org.apache.camel.quarkus.component.jpa.QuarkusTransactionStrategy;
 import org.apache.camel.quarkus.core.deployment.spi.CamelBeanQualifierResolverBuildItem;
 import org.apache.camel.quarkus.core.deployment.spi.CamelRuntimeBeanBuildItem;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 
 class JpaProcessor {
 
@@ -117,11 +118,6 @@ class JpaProcessor {
                         @Override
                         public MethodVisitor visitMethod(int access, String name, String descriptor, String signature,
                                 String[] exceptions) {
-                            if (name.equals("createTransactionStrategy")) {
-                                /* remove JpaEndpoint.createTransactionStrategy() */
-                                return null;
-                            }
-
                             MethodVisitor visitor = super.visitMethod(access, name, descriptor, signature, exceptions);
 
                             if (name.equals("createEntityManagerFactory")
@@ -139,27 +135,6 @@ class JpaProcessor {
                                         visitor.visitInsn(Opcodes.ATHROW);
                                     }
                                 };
-                            } else if (name.equals("getTransactionStrategy")) {
-                                /* let getTransactionStrategy() just return this.transactionStrategy
-                                 * rather than call createTransactionStrategy() */
-                                return new MethodVisitor(Gizmo.ASM_API_VERSION, visitor) {
-                                    @Override
-                                    public void visitCode() {
-                                        super.visitCode();
-
-                                        visitor.visitVarInsn(Opcodes.ALOAD, 0);
-                                        FieldDescriptor fd = FieldDescriptor.of(JpaEndpoint.class, "transactionStrategy",
-                                                TransactionStrategy.class);
-                                        visitor.visitFieldInsn(
-                                                Opcodes.GETFIELD,
-                                                fd.getDeclaringClass(),
-                                                fd.getName(),
-                                                fd.getType());
-                                        mv.visitInsn(Opcodes.ARETURN);
-                                        mv.visitMaxs(1, 1);
-                                        mv.visitEnd();
-                                    }
-                                };
                             }
                             return visitor;
                         }
@@ -169,9 +144,17 @@ class JpaProcessor {
     }
 
     @BuildStep
-    BytecodeTransformerBuildItem transformJpaComponent() {
+    BytecodeTransformerBuildItem transformJpaHelper() {
+        // DefaultTransactionStrategy is removed. JpaHelper still creates it for the repositories, which have
+        // no CamelContext to find the TransactionStrategy bean, so create a QuarkusTransactionStrategy instead:
+        //
+        // private static TransactionStrategy createDefaultTransactionStrategy(CamelContext camelContext,
+        //         EntityManagerFactory entityManagerFactory) {
+        //     return new QuarkusTransactionStrategy();
+        // }
+        String quarkusTransactionStrategy = Type.getInternalName(QuarkusTransactionStrategy.class);
         return new BytecodeTransformerBuildItem.Builder()
-                .setClassToTransform(JpaComponent.class.getName())
+                .setClassToTransform(JpaHelper.class.getName())
                 .setCacheable(true)
                 .setVisitorFunction((className, classVisitor) -> {
                     return new ClassVisitor(Gizmo.ASM_API_VERSION, classVisitor) {
@@ -179,15 +162,16 @@ class JpaProcessor {
                         public MethodVisitor visitMethod(int access, String name, String descriptor, String signature,
                                 String[] exceptions) {
                             MethodVisitor visitor = super.visitMethod(access, name, descriptor, signature, exceptions);
-                            if (name.equals("createTransactionStrategy")) {
-                                /* Remove the body of JpaComponent.createTransactionStrategy() */
+                            if (name.equals("createDefaultTransactionStrategy")) {
                                 return new MethodVisitor(Gizmo.ASM_API_VERSION, visitor) {
                                     @Override
                                     public void visitCode() {
                                         super.visitCode();
-                                        mv.visitInsn(Opcodes.RETURN);
-                                        mv.visitMaxs(0, 0);
-                                        mv.visitEnd();
+                                        visitor.visitTypeInsn(Opcodes.NEW, quarkusTransactionStrategy);
+                                        visitor.visitInsn(Opcodes.DUP);
+                                        visitor.visitMethodInsn(Opcodes.INVOKESPECIAL, quarkusTransactionStrategy, "<init>",
+                                                "()V", false);
+                                        visitor.visitInsn(Opcodes.ARETURN);
                                     }
                                 };
                             }
