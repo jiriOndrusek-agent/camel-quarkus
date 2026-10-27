@@ -290,16 +290,18 @@ class Langchain4jIngestProcessor {
     void validatePipelines(IngestBuildTimeConfig config, BuildProducer<ValidationErrorBuildItem> validationErrors) {
         for (Map.Entry<String, IngestBuildTimeConfig.PipelineBuildTimeConfig> entry : config.pipelines().entrySet()) {
             IngestBuildTimeConfig.PipelineBuildTimeConfig pipeline = entry.getValue();
+            // as in the component, the splitter sizes and the batch size are not validated where they do not apply
+            boolean media = "media".equalsIgnoreCase(pipeline.modality());
 
-            if (pipeline.maxSegmentSize() <= 0 || pipeline.maxOverlapSize() < 0
-                    || pipeline.maxOverlapSize() >= pipeline.maxSegmentSize()) {
+            if (!media && (pipeline.maxSegmentSize() <= 0 || pipeline.maxOverlapSize() < 0
+                    || pipeline.maxOverlapSize() >= pipeline.maxSegmentSize())) {
                 validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
                         "Ingestion pipeline '" + entry.getKey() + "': max-segment-size must be positive and "
                                 + "max-overlap-size must be smaller than it (got " + pipeline.maxSegmentSize()
                                 + " / " + pipeline.maxOverlapSize() + ")")));
             }
 
-            if (pipeline.embeddingBatchSize() < 1) {
+            if (!media && pipeline.embeddingBatchSize() < 1) {
                 validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
                         "Ingestion pipeline '" + entry.getKey() + "': embedding-batch-size must be positive (got "
                                 + pipeline.embeddingBatchSize() + ")")));
@@ -312,7 +314,6 @@ class Langchain4jIngestProcessor {
             }
 
             // the component and IngestRoutes check these at startup; a configured pipeline fails the build instead
-            boolean media = "media".equalsIgnoreCase(pipeline.modality());
             if (!media && !"text".equalsIgnoreCase(pipeline.modality())) {
                 validationErrors.produce(new ValidationErrorBuildItem(new ConfigurationException(
                         "Ingestion pipeline '" + entry.getKey() + "': modality must be 'text' or 'media' (got '"

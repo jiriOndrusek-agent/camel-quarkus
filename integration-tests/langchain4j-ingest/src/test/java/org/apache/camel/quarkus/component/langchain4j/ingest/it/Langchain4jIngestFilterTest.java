@@ -27,6 +27,7 @@ import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -104,6 +105,30 @@ class Langchain4jIngestFilterTest {
                         .queryParam("key", key)
                         .get("/langchain4j-ingest/register-contains")
                         .then().statusCode(200).extract().asString()));
+    }
+
+    /**
+     * A named register may be persistent, so a filtered file's key stays out of it: on {@code products} the excluded
+     * file is still skipped across polls, its key held in memory, and a filter changed for the next start applies to it.
+     */
+    @Test
+    void filteredFileStaysOutOfTheNamedRegister() throws Exception {
+        Langchain4jIngestTest.write("draft-pumps.txt", "The ZETA-9 pump draft is not final.");
+
+        Path file = Path.of("target/ingest-docs/draft-pumps.txt").toAbsolutePath();
+        String key = file + ":" + Files.getLastModifiedTime(file).toMillis() + ":" + Files.size(file);
+        Awaitility.await().atMost(30, TimeUnit.SECONDS).during(3, TimeUnit.SECONDS)
+                .pollInterval(100, TimeUnit.MILLISECONDS)
+                .until(() -> registerContains("langchain4j-ingest-products-register", key));
+        assertFalse(registerContains("propertiesRegister", key), "the named register must not hold the key");
+    }
+
+    private static boolean registerContains(String repo, String key) {
+        return Boolean.parseBoolean(RestAssured.given()
+                .queryParam("repo", repo)
+                .queryParam("key", key)
+                .get("/langchain4j-ingest/register-contains")
+                .then().statusCode(200).extract().asString());
     }
 
     /** Answers the outcome, or the failure message. */

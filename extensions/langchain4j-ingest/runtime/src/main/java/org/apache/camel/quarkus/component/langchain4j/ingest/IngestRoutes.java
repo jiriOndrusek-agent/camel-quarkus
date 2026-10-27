@@ -39,9 +39,12 @@ import jakarta.enterprise.inject.literal.NamedLiteral;
 import jakarta.inject.Inject;
 import org.apache.camel.CamelContextAware;
 import org.apache.camel.Exchange;
+import org.apache.camel.ExchangePropertyKey;
 import org.apache.camel.Expression;
+import org.apache.camel.Predicate;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.file.GenericFile;
 import org.apache.camel.component.langchain4j.ingest.IngestResult;
 import org.apache.camel.component.langchain4j.ingest.LangChain4jIngest;
 import org.apache.camel.component.langchain4j.ingest.LangChain4jIngestHeaders;
@@ -50,6 +53,8 @@ import org.apache.camel.spi.IdempotentRepository;
 import org.apache.camel.support.builder.ExpressionBuilder;
 import org.apache.camel.support.builder.PredicateBuilder;
 import org.apache.camel.support.processor.idempotent.MemoryIdempotentRepository;
+import org.apache.camel.support.service.ServiceHelper;
+import org.apache.camel.support.service.ServiceSupport;
 import org.apache.camel.util.AntPathMatcher;
 import org.apache.camel.util.URISupport;
 import org.jboss.logging.Logger;
@@ -267,7 +272,6 @@ public class IngestRoutes extends RouteBuilder {
         sink.put("contentType", contentType == null ? "" : contentType);
         // 0, no limit, is the endpoint's default too
         sink.put("maxDocumentSize", String.valueOf(maxDocumentSize));
-        sink.put("minDocumentSize", "0");
         if (documentSplitterName != null) {
             sink.put("documentSplitter", "#bean:" + documentSplitterName);
         }
@@ -280,11 +284,18 @@ public class IngestRoutes extends RouteBuilder {
         String excludeId = filter.excludeId().orElse("");
         sink.put("includeId", includeId);
         sink.put("excludeId", excludeId);
-        if (filter.minDocumentSize() != 0) {
-            sink.put("minDocumentSize", String.valueOf(filter.minDocumentSize()));
+        sink.put("minDocumentSize", String.valueOf(filter.minDocumentSize()));
+        String documentFilter = filter.documentFilter().orElse(null);
+        // checked up front, like the idempotent repository: the Kamelet's property binding would
+        // fail naming neither the pipeline nor the property
+        if (documentFilter != null
+                && getContext().getRegistry().lookupByNameAndType(documentFilter, Predicate.class) == null) {
+            throw new IllegalStateException("Ingestion pipeline '" + name + "' references document filter '"
+                    + documentFilter + "' but no such bean exists");
         }
-        sink.put("documentFilter", "#bean:" + filter.documentFilter()
-                .orElseGet(() -> bindInstance(name, "document-filter", PredicateBuilder.constant(true))));
+        sink.put("documentFilter", "#bean:" + (documentFilter != null
+                ? documentFilter
+                : bindInstance(name, "document-filter", PredicateBuilder.constant(true))));
         sink.put("embeddingStore", "#bean:" + storeRef);
         sink.put("embeddingModel", "#bean:" + modelRef);
 
@@ -311,6 +322,12 @@ public class IngestRoutes extends RouteBuilder {
 
             ProcessorDefinition<?> route = from(kameletUri(name, FILE_SOURCE_KAMELET, "source", source))
                     .routeId(id(name));
+            if (parser != null || media) {
+                // the file endpoint has no neutral charset to pin, so an application-wide
+                // camel.kamelet.langchain4j-ingest-file-source.charset still reaches it; dropped
+                // before any step reads the file, it can neither fail nor silently corrupt the bytes
+                route = route.process(IngestRoutes::dropCharset);
+            }
             if (documentId != null) {
                 // override the source's file-name default; captured before any further step
                 route = route.setHeader(LangChain4jIngestHeaders.DOCUMENT_ID, documentIdExpression(documentId));
@@ -322,11 +339,11 @@ public class IngestRoutes extends RouteBuilder {
             // The discarded reply would hide an empty outcome, so it is logged: warned with a
             // parser, since a parse to nothing typically means a missing Tika parser module or an
             // image-only document, and the file's register key is committed. A filtered one is
-            // logged at DEBUG
+            // logged at DEBUG, its key kept in memory only
             route.to(kameletUri(name, SINK_KAMELET, "sink", sink)).process(exchange -> {
                 IngestResult result = exchange.getMessage().getBody(IngestResult.class);
                 if (result != null && result.outcome() == IngestResult.Outcome.FILTERED) {
-                    logFiltered(name, result.documentId());
+                    fileFiltered(exchange, name, result.documentId());
                 }
                 if (result == null || result.outcome() != IngestResult.Outcome.EMPTY) {
                     return;
@@ -419,7 +436,7 @@ public class IngestRoutes extends RouteBuilder {
                     .process(exchange -> {
                         String id = exchange.getMessage().getHeader(documentIdHeader, String.class);
                         if (directory) {
-                            logFiltered(name, id);
+                            fileFiltered(exchange, name, id);
                         }
                         exchange.getMessage().setBody(new IngestResult(name, id, 0, IngestResult.Outcome.FILTERED));
                     })
@@ -503,10 +520,26 @@ public class IngestRoutes extends RouteBuilder {
         return patterns.length == 0 ? null : patterns;
     }
 
-    /** A directory pipeline discards the reply, so a filtered document is logged instead. */
-    private static void logFiltered(String name, String documentId) {
-        LOG.debugf("Ingestion pipeline '%s': document '%s' was filtered out; its key is committed, so it is not"
-                + " read again until the file changes", name, documentId);
+    /**
+     * A directory pipeline discards the reply, so a filtered document is logged instead; a named register does not
+     * keep its file's key, see {@link SourceRegister}.
+     */
+    private static void fileFiltered(Exchange exchange, String name, String documentId) {
+        LOG.debugf("Ingestion pipeline '%s': document '%s' was filtered out; it is not read again until the file"
+                + " changes or the application restarts", name, documentId);
+        String key = exchange.getProperty(Exchange.FILE_IDEMPOTENT_KEY, String.class);
+        if (key != null && exchange.getContext().getRegistry().lookupByNameAndType(id(name, "register"),
+                IdempotentRepository.class) instanceof SourceRegister register) {
+            register.filtered(key);
+        }
+    }
+
+    /** As if the file consumer had no charset: a {@code GenericFile} body then converts to the file's own bytes. */
+    private static void dropCharset(Exchange exchange) {
+        exchange.removeProperty(ExchangePropertyKey.CHARSET_NAME);
+        if (exchange.getMessage().getBody() instanceof GenericFile<?> file) {
+            file.setCharset(null);
+        }
     }
 
     /**
@@ -556,7 +589,7 @@ public class IngestRoutes extends RouteBuilder {
      * checked up front, with the configuration-level message), an auto-created in-memory register
      * bound under the configured name, or - for a directory pipeline naming none - a generated
      * built-in one, sized above the file endpoint's default so eviction does not re-ingest large
-     * directories.
+     * directories. A directory pipeline's named register is wrapped in a {@link SourceRegister}.
      */
     private String repositoryRef(String name, IngestRunTimeConfig.PipelineRunTimeConfig runtime, boolean directory) {
         String repositoryName = runtime == null ? null : runtime.source().idempotentRepository().orElse(null);
@@ -574,14 +607,14 @@ public class IngestRoutes extends RouteBuilder {
                     throw new IllegalStateException("Ingestion pipeline '" + name
                             + "' references idempotent repository '" + repositoryName + "' but no such bean exists");
                 }
-                getContext().getRegistry().bind(repositoryName,
-                        MemoryIdempotentRepository.memoryIdempotentRepository(DEFAULT_REGISTER_CAPACITY));
+                repository = MemoryIdempotentRepository.memoryIdempotentRepository(DEFAULT_REGISTER_CAPACITY);
+                getContext().getRegistry().bind(repositoryName, repository);
             } else {
                 // a CDI-produced repository does not pass through the registry's bind hook, so a
                 // CamelContextAware implementation would otherwise run contextless
                 CamelContextAware.trySetCamelContext(repository, getContext());
             }
-            return repositoryName;
+            return directory ? bindInstance(name, "register", new SourceRegister(repository)) : repositoryName;
         }
         if (directory) {
             String ref = id(name, "register");
@@ -692,5 +725,64 @@ public class IngestRoutes extends RouteBuilder {
                             : "quarkus.camel.langchain4j.ingest." + name + "." + property));
         }
         return handles.get(0).get();
+    }
+
+    /**
+     * A directory pipeline's named register, which may be persistent. The key of a file the pipeline answers
+     * filtered is held in memory instead: the file is skipped while the application runs and checked again after a
+     * restart, so a changed {@code filter.*} applies to it. Releasing the key would read the file on every poll.
+     */
+    private static final class SourceRegister extends ServiceSupport implements IdempotentRepository {
+
+        private final IdempotentRepository register;
+        private final IdempotentRepository filtered = MemoryIdempotentRepository
+                .memoryIdempotentRepository(DEFAULT_REGISTER_CAPACITY);
+
+        SourceRegister(IdempotentRepository register) {
+            this.register = register;
+        }
+
+        /** Moves a key the file consumer added when it picked the file up; its commit then finds it here. */
+        void filtered(String key) {
+            filtered.add(key);
+            register.remove(key);
+        }
+
+        @Override
+        public boolean add(String key) {
+            return !filtered.contains(key) && register.add(key);
+        }
+
+        @Override
+        public boolean contains(String key) {
+            return filtered.contains(key) || register.contains(key);
+        }
+
+        @Override
+        public boolean remove(String key) {
+            // from both, never short-circuited
+            return filtered.remove(key) | register.remove(key);
+        }
+
+        @Override
+        public boolean confirm(String key) {
+            return filtered.contains(key) || register.confirm(key);
+        }
+
+        @Override
+        public void clear() {
+            filtered.clear();
+            register.clear();
+        }
+
+        @Override
+        protected void doStart() {
+            ServiceHelper.startService(register);
+        }
+
+        @Override
+        protected void doStop() {
+            ServiceHelper.stopService(register);
+        }
     }
 }

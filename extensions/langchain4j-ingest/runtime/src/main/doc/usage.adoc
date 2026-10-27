@@ -35,7 +35,7 @@ Matching is case-sensitive, and an id starting with `/` (an absolute path, say) 
 With a `parser` they are checked before the parse, so an excluded document is never parsed nor sent to Docling Serve.
 `filter.min-document-size` rejects documents too short to carry retrievable content, and `filter.document-filter` names a Camel `Predicate` bean evaluated with the body available.
 With a `parser` these two see the parsed text, so a document they reject has been parsed first — with `docling`, by the remote Docling Serve.
-A rejected delivery is answered with a `filtered` outcome; on a directory pipeline it is logged at DEBUG and the file register still records it, so it is not read again until it changes.
+A rejected delivery is answered with a `filtered` outcome; on a directory pipeline it is logged at DEBUG and the file is not read again until it changes, its key held in memory even with a persistent register: after a restart, a changed `filter.++*++` applies to it.
 An `@Ingest` pipeline is filtered the same way: the builder has no filter methods, and the `filter.*` properties apply to it too.
 
 [source,properties]

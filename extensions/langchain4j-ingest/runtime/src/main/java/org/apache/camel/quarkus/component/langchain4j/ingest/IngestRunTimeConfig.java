@@ -56,8 +56,9 @@ public interface IngestRunTimeConfig {
 
         /**
          * Filters deciding which deliveries are ingested. A rejected delivery is answered with
-         * a `filtered` outcome and never keeps the sink's dedup claim; a directory pipeline's file
-         * register still records the file, so it is not read again until it changes.
+         * a `filtered` outcome and never keeps the sink's dedup claim; a directory pipeline does not
+         * read the file again until it changes, its key held in memory even with a persistent
+         * register, so after a restart a changed filter applies to it.
          */
         FilterRunTimeConfig filter();
 
