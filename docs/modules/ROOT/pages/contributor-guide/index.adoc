@@ -77,7 +77,7 @@ export MAVEN_OPTS="$MAVEN_OPTS -Djdk.tls.namedGroups=secp256r1,secp384r1,secp521
 mvn clean install -Dfips
 ----
 
-`MAVEN_OPTS` covers Maven itself (artifact downloads), `-Dfips` covers the test JVMs and the native image builder.
+`MAVEN_OPTS` covers Maven itself (artifact downloads). On JDK 25+, `-Dfips` covers the test JVMs and the native image builder.
 With JDK 21 the default list has no ML-KEM group, so `MAVEN_OPTS` needs no change.
 The WS-Security tests in `integration-tests/cxf-soap-grouped` also need `-Dfips.enabled=true`, so that WSS4J detects the FIPS mode.
 

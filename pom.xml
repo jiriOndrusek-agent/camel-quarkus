@@ -319,7 +319,7 @@
         <!-- allow findbugs dependency in the enforcer -->
         <allow-findbugs>false</allow-findbugs>
 
-        <!-- Set by the fips profile. Modules setting their own quarkus.test.arg-line must append it -->
+        <!-- Set by the fips-jdk25 profile. Modules setting their own quarkus.test.arg-line must append it -->
         <fips.test.arg-line />
     </properties>
 
@@ -1747,8 +1747,7 @@
             </build>
         </profile>
         <profile>
-            <!-- FIPS host support: switch test container images that do not start on FIPS-enabled kernels. Activate with -Dfips
-                 NSS FIPS has no ML-KEM, so the TLS handshake fails if the hybrid X25519MLKEM768 group is offered -->
+            <!-- FIPS host support: switch test container images that do not start on FIPS-enabled kernels. Activate with -Dfips -->
             <id>fips</id>
             <activation>
                 <property>
@@ -1757,7 +1756,20 @@
             </activation>
             <properties>
                 <sql-server.container.image>${sql-server.container.image.fips}</sql-server.container.image>
-                <!-- The groups a Red Hat JDK enables on a FIPS machine, without the hybrid ML-KEM ones, as printed there by
+            </properties>
+        </profile>
+        <profile>
+            <!-- NSS FIPS has no ML-KEM, so the TLS handshake fails if the hybrid X25519MLKEM768 group is offered -->
+            <id>fips-jdk25</id>
+            <!-- JDK 25+ only: older JDKs don't offer X25519MLKEM768, their FIPS default is already the list below -->
+            <activation>
+                <jdk>[25,)</jdk>
+                <property>
+                    <name>fips</name>
+                </property>
+            </activation>
+            <properties>
+                <!-- The groups a Red Hat JDK 25 enables on a FIPS machine, without the hybrid ML-KEM ones, as printed there by
                      echo 'String.join(",", javax.net.ssl.SSLContext.getDefault().getDefaultSSLParameters().getNamedGroups())' | jshell -q -->
                 <fips.tls.named-groups>secp256r1,secp384r1,secp521r1,ffdhe2048,ffdhe3072,ffdhe4096,ffdhe6144,ffdhe8192</fips.tls.named-groups>
                 <fips.test.arg-line>-Djdk.tls.namedGroups=${fips.tls.named-groups}</fips.test.arg-line>
