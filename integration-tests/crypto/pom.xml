@@ -37,18 +37,6 @@
                 <filtering>true</filtering>
             </resource>
         </resources>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-resources-plugin</artifactId>
-                <!-- Required to do not alter crypto.jks -->
-                <configuration>
-                    <nonFilteredFileExtensions>
-                        <nonFilteredFileExtension>jks</nonFilteredFileExtension>
-                    </nonFilteredFileExtensions>
-                </configuration>
-            </plugin>
-        </plugins>
     </build>
 
     <dependencies>
@@ -86,6 +74,11 @@
             <artifactId>quarkus-junit-internal</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.camel.quarkus</groupId>
+            <artifactId>camel-quarkus-integration-tests-support-certificate-generator</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <profiles>
@@ -108,7 +101,61 @@
                     <groupId>io.quarkus</groupId>
                     <artifactId>quarkus-security</artifactId>
                 </dependency>
+                <!-- The non-FIPS BouncyCastle of the certificate generator clashes with bc-fips.
+                     generate-certs.sh creates the keystore instead of @TestCertificates -->
+                <dependency>
+                    <groupId>org.apache.camel.quarkus</groupId>
+                    <artifactId>camel-quarkus-integration-tests-support-certificate-generator</artifactId>
+                    <scope>test</scope>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.bouncycastle</groupId>
+                            <artifactId>*</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
             </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>generate-certs.sh</id>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <phase>generate-test-resources</phase>
+                                <configuration>
+                                    <executable>bash</executable>
+                                    <arguments>
+                                        <argument>${basedir}/generate-certs.sh</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <cq.test.certificates.skip>true</cq.test.certificates.skip>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <cq.test.certificates.skip>true</cq.test.certificates.skip>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
         <profile>
             <id>fips</id>
@@ -126,6 +173,19 @@
                     <artifactId>quarkus-security</artifactId>
                 </dependency>
             </dependencies>
+        </profile>
+        <profile>
+            <!-- Red Hat JDK 25+ names the NSS FIPS provider SunPKCS11-FIPS -->
+            <id>fips-jdk25</id>
+            <activation>
+                <jdk>[25,)</jdk>
+                <property>
+                    <name>fips</name>
+                </property>
+            </activation>
+            <properties>
+                <cq-security-provider>quarkus.security.security-providers=SunPKCS11-FIPS</cq-security-provider>
+            </properties>
         </profile>
         <profile>
             <id>native</id>
