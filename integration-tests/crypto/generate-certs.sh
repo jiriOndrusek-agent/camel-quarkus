@@ -17,7 +17,8 @@
 #
 
 # Generates the keystore of CryptoResource for the bcfips profile, where @TestCertificates cannot be used,
-# as its certificate generator needs the non-FIPS BouncyCastle
+# as its certificate generator needs the non-FIPS BouncyCastle. Not run by the build, run it from this directory
+# to regenerate the committed src/main/resources/crypto-keystore.p12
 
 set -e
 set -x
@@ -29,7 +30,7 @@ password="crypto-keystore-password"
 encryptionAlgo="aes-256-cbc"
 
 workDir="target/openssl-work"
-destinationDir="target/certs"
+destinationDir="src/main/resources"
 
 # see https://stackoverflow.com/a/54924640
 export MSYS_NO_PATHCONV=1

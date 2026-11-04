@@ -60,7 +60,7 @@ public class TestCertificateGenerationExtension implements BeforeAllCallback {
         if (maybe.isEmpty()) {
             return;
         }
-        // the build provides the certificates, e.g. where the non-FIPS BouncyCastle of the generator cannot be used
+        // the certificates are provided otherwise, e.g. where the non-FIPS BouncyCastle of the generator cannot be used
         if (Boolean.getBoolean(SKIP_PROPERTY)) {
             LOGGER.infof("Certificate generation skipped, %s is true", SKIP_PROPERTY);
             return;
