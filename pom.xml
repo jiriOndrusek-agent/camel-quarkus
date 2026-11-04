@@ -318,6 +318,9 @@
 
         <!-- allow findbugs dependency in the enforcer -->
         <allow-findbugs>false</allow-findbugs>
+
+        <!-- Set by the fips profile. Modules setting their own quarkus.test.arg-line must append it -->
+        <fips.test.arg-line />
     </properties>
 
     <!-- Core modules -->
@@ -1757,6 +1760,7 @@
                 <!-- The groups a Red Hat JDK enables on a FIPS machine, without the hybrid ML-KEM ones, as printed there by
                      echo 'String.join(",", javax.net.ssl.SSLContext.getDefault().getDefaultSSLParameters().getNamedGroups())' | jshell -q -->
                 <fips.tls.named-groups>secp256r1,secp384r1,secp521r1,ffdhe2048,ffdhe3072,ffdhe4096,ffdhe6144,ffdhe8192</fips.tls.named-groups>
+                <fips.test.arg-line>-Djdk.tls.namedGroups=${fips.tls.named-groups}</fips.test.arg-line>
                 <!-- The native image builder initializes JSSE classes reading jdk.tls.namedGroups, the same groups with escaped commas -->
                 <quarkus.native.additional-build-args-append>-J-Djdk.tls.namedGroups=secp256r1\,secp384r1\,secp521r1\,ffdhe2048\,ffdhe3072\,ffdhe4096\,ffdhe6144\,ffdhe8192</quarkus.native.additional-build-args-append>
             </properties>
@@ -1780,7 +1784,7 @@
                                     <!-- the test JVM is a TLS client too, e.g. RestAssured over HTTPS -->
                                     <jdk.tls.namedGroups>${fips.tls.named-groups}</jdk.tls.namedGroups>
                                     <!-- passed to the application under test, e.g. the native binary -->
-                                    <quarkus.test.arg-line>-Djdk.tls.namedGroups=${fips.tls.named-groups}</quarkus.test.arg-line>
+                                    <quarkus.test.arg-line>${fips.test.arg-line}</quarkus.test.arg-line>
                                 </systemPropertyVariables>
                             </configuration>
                         </plugin>
