@@ -29,6 +29,7 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import org.apache.camel.CamelContext;
+import org.apache.camel.ProducerTemplate;
 import org.apache.camel.component.ai.tool.AiToolRegistry;
 import org.apache.camel.component.ai.tool.AiToolSpec;
 import org.apache.camel.quarkus.component.ai.tool.langchain4j.it.service.AdminAiService;
@@ -42,6 +43,9 @@ public class AiToolLangchain4jResource {
 
     @Inject
     CamelContext camelContext;
+
+    @Inject
+    ProducerTemplate producerTemplate;
 
     @Inject
     WeatherAiService weatherAiService;
@@ -85,6 +89,14 @@ public class AiToolLangchain4jResource {
     @Produces(MediaType.TEXT_PLAIN)
     public String allToolsChat(String message) {
         return allToolsAiService.chat(message);
+    }
+
+    @Path("/camel-agent/chat")
+    @POST
+    @Consumes(MediaType.TEXT_PLAIN)
+    @Produces(MediaType.TEXT_PLAIN)
+    public String camelAgentChat(String message) {
+        return producerTemplate.requestBody("direct:camelAgent", message, String.class);
     }
 
     @Path("/tools/{tag}")

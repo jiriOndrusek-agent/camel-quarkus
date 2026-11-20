@@ -26,13 +26,16 @@ import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.internal.Json;
+import dev.langchain4j.internal.JsonSchemaElementJsonUtils;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 
 /**
  * Mock model driven by the user message: {@code list} answers with the names of the offered tools (or
- * {@code none}), {@code call <tool> <arguments>} calls the tool and answers with its result.
+ * {@code none}), {@code schema <tool>} answers with the JSON schema of the offered tool parameters,
+ * {@code call <tool> <arguments>} calls the tool and answers with its result.
  */
 public class ScriptedChatModel implements Supplier<ChatModel> {
 
@@ -64,6 +67,14 @@ public class ScriptedChatModel implements Supplier<ChatModel> {
                 }
 
                 List<ToolSpecification> tools = chatRequest.toolSpecifications();
+                if (text.startsWith("schema ")) {
+                    String name = text.substring("schema ".length());
+                    return answer(tools.stream()
+                            .filter(tool -> tool.name().equals(name))
+                            .map(tool -> Json.toJson(JsonSchemaElementJsonUtils.toMap(tool.parameters())))
+                            .findFirst()
+                            .orElse("none"));
+                }
                 return answer(tools == null || tools.isEmpty()
                         ? "none"
                         : tools.stream().map(ToolSpecification::name).sorted().collect(Collectors.joining(",")));

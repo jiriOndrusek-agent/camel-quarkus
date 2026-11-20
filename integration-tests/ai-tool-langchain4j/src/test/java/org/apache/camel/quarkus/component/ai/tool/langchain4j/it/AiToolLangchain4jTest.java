@@ -18,9 +18,11 @@ package org.apache.camel.quarkus.component.ai.tool.langchain4j.it;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
+import io.restassured.parsing.Parser;
 import io.restassured.response.ValidatableResponse;
 import org.junit.jupiter.api.Test;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -102,7 +104,7 @@ class AiToolLangchain4jTest {
     @Test
     void serviceWithoutCamelAiToolsReceivesAllTools() {
         chat("all-tools", "list")
-                .body(is("failingTool,getNews,getWeather"));
+                .body(is("createOrder,failingTool,getNews,getWeather"));
     }
 
     @Test
@@ -115,6 +117,33 @@ class AiToolLangchain4jTest {
     void toolFailureIsSanitized() {
         chat("all-tools", "call failingTool {}")
                 .body(is("Tool execution failed"));
+    }
+
+    // Without the isCamelAgentRequest guard in CamelAiToolProvider, the agent gets every tool plus a duplicate getWeather
+    @Test
+    void camelAgentReceivesOnlyItsTaggedTools() {
+        chat("camel-agent", "list")
+                .body(is("getWeather"));
+    }
+
+    @Test
+    void nestedArgSchemaReachesModel() {
+        chat("all-tools", "schema createOrder")
+                .parser("text/plain", Parser.JSON)
+                .body("properties.customer.properties.name.type", is("string"))
+                .body("properties.customer.required", contains("name"))
+                .body("properties.items.type", is("array"))
+                .body("properties.items.items.properties.quantity.type", is("integer"))
+                .body("properties.items.items.required", contains("sku", "quantity"))
+                .body("properties.priority.enum", contains("LOW", "HIGH"))
+                .body("required", contains("customer", "items"));
+    }
+
+    @Test
+    void nestedArgumentsReachRoute() {
+        chat("all-tools",
+                "call createOrder {\"customer\":{\"name\":\"Joe\"},\"items\":[{\"sku\":\"A1\",\"quantity\":2}],\"priority\":\"HIGH\"}")
+                .body(is("Joe,A1,2,HIGH"));
     }
 
     private static ValidatableResponse chat(String service, String message) {
