@@ -50,7 +50,7 @@ public class CamelAiToolProvider implements ToolProvider {
     static final Map<String, String> TAG_MAP = new ConcurrentHashMap<>();
     // Set by CamelAiToolsInterceptor before each AI service call so provideTools() can filter by the calling service's tag
     private static final ThreadLocal<String> CURRENT_TAG = new ThreadLocal<>();
-    private static final Set<String> CAMEL_AGENT_SERVICE_INTERFACES = Set.of(
+    static final Set<String> CAMEL_AGENT_SERVICE_INTERFACES = Set.of(
             "org.apache.camel.component.langchain4j.agent.api.AiAgentWithMemoryService",
             "org.apache.camel.component.langchain4j.agent.api.AiAgentWithoutMemoryService");
 
