@@ -18,9 +18,13 @@ package org.apache.camel.quarkus.component.ai.tool.langchain4j.it;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
+import io.restassured.parsing.Parser;
 import io.restassured.response.ValidatableResponse;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -83,9 +87,9 @@ class AiToolLangchain4jTest {
                 .body(containsString("news"));
     }
 
-    // Verifies that the @CamelAiTools interceptor filters tools by tag: a service tagged "adminTag"
+    // Verifies that @CamelAiTools filters tools by tag: a service tagged "adminTag"
     // should not see the getWeather tool (tagged "weatherTag"), so the mock model won't call it
-    // and "1111" won't appear in the response. Fails if the interceptor is broken and all tools are visible.
+    // and "1111" won't appear in the response. Fails if the tag filter is broken and all tools are visible.
     @Test
     void weatherWithWrongTagTest() {
         RestAssured.given()
@@ -102,7 +106,7 @@ class AiToolLangchain4jTest {
     @Test
     void serviceWithoutCamelAiToolsReceivesAllTools() {
         chat("all-tools", "list")
-                .body(is("failingTool,getNews,getWeather"));
+                .body(is("createOrder,failingTool,getNews,getWeather"));
     }
 
     @Test
@@ -117,6 +121,33 @@ class AiToolLangchain4jTest {
                 .body(is("Tool execution failed"));
     }
 
+    // Without the isCamelAgentRequest guard in CamelAiToolProvider, the agent gets every tool plus a duplicate getWeather
+    @Test
+    void camelAgentReceivesOnlyItsTaggedTools() {
+        chat("camel-agent", "list")
+                .body(is("getWeather"));
+    }
+
+    @Test
+    void nestedArgSchemaReachesModel() {
+        chat("all-tools", "schema createOrder")
+                .parser("text/plain", Parser.JSON)
+                .body("parameters.properties.customer.properties.name.type", is("string"))
+                .body("parameters.properties.customer.required", contains("name"))
+                .body("parameters.properties.items.type", is("array"))
+                .body("parameters.properties.items.items.properties.quantity.type", is("integer"))
+                .body("parameters.properties.items.items.required", contains("sku", "quantity"))
+                .body("parameters.properties.priority.enum", contains("LOW", "HIGH"))
+                .body("parameters.required", contains("customer", "items"));
+    }
+
+    @Test
+    void nestedArgumentsReachRoute() {
+        chat("all-tools",
+                "call createOrder {\"customer\":{\"name\":\"Joe\"},\"items\":[{\"sku\":\"A1\",\"quantity\":2}],\"priority\":\"HIGH\"}")
+                .body(is("Joe,A1,2,HIGH"));
+    }
+
     private static ValidatableResponse chat(String service, String message) {
         return RestAssured.given()
                 .contentType("text/plain")
@@ -124,6 +155,20 @@ class AiToolLangchain4jTest {
                 .post("/ai-tool-langchain4j/" + service + "/chat")
                 .then()
                 .statusCode(200);
+    }
+
+    // The streaming model answers with the names of the tools it was offered: only the tagged tool is expected,
+    // also when the Multi service is called on the event loop
+    @ParameterizedTest
+    @ValueSource(strings = { "non-blocking", "blocking" })
+    void weatherStreamingServiceGetsOnlyTaggedTools(String mode) {
+        RestAssured.given()
+                .contentType("text/plain")
+                .body("What is the weather in Prague?")
+                .post("/ai-tool-langchain4j/weather-streaming/" + mode + "/chat")
+                .then()
+                .statusCode(200)
+                .body(is("getWeather"));
     }
 
 }
