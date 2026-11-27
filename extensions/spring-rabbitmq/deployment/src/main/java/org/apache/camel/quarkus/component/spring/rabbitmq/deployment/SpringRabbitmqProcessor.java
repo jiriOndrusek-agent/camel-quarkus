@@ -20,6 +20,7 @@ import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.NativeImageProxyDefinitionBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
 import org.springframework.amqp.rabbit.connection.ChannelProxy;
 import org.springframework.aop.SpringProxy;
 import org.springframework.aop.framework.Advised;
@@ -43,5 +44,16 @@ class SpringRabbitmqProcessor {
                  * although it is present in camel-quarkus-support-spring-core that we depend on here.
                  * It works well with string though */
                 "org.springframework.core.DecoratingProxy"));
+    }
+
+    @BuildStep
+    void runtimeInitializedClasses(BuildProducer<RuntimeInitializedClassBuildItem> runtimeInitializedClasses) {
+        // The Netty frame handler is not used by default (blocking IO), but it becomes reachable
+        // when com.rabbitmq.client.ConnectionFactory is registered for reflection.
+        // Its static Netty ByteBuf must not end up in the image heap.
+        runtimeInitializedClasses
+                .produce(new RuntimeInitializedClassBuildItem("com.rabbitmq.client.impl.NettyFrameHandlerFactory"));
+        runtimeInitializedClasses.produce(
+                new RuntimeInitializedClassBuildItem("com.rabbitmq.client.impl.NettyFrameHandlerFactory$NettyFrameHandler"));
     }
 }

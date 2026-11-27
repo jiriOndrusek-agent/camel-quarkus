@@ -7280,7 +7280,7 @@
       <dependency>
         <groupId>com.github.mwiede</groupId>
         <artifactId>jsch</artifactId>
-        <version>2.28.7</version>
+        <version>2.28.8</version>
       </dependency>
       <dependency>
         <groupId>com.google.api</groupId>
@@ -7558,6 +7558,16 @@
         <version>3.0.0</version>
       </dependency>
       <dependency>
+        <groupId>com.squareup.wire</groupId>
+        <artifactId>wire-runtime</artifactId>
+        <version>6.4.7</version>
+      </dependency>
+      <dependency>
+        <groupId>com.squareup.wire</groupId>
+        <artifactId>wire-runtime-jvm</artifactId>
+        <version>6.4.7</version>
+      </dependency>
+      <dependency>
         <groupId>commons-beanutils</groupId>
         <artifactId>commons-beanutils</artifactId>
         <version>1.11.0</version>
@@ -7592,7 +7602,7 @@
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-embeddings</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>io.atlassian.fugue</groupId>
@@ -7696,7 +7706,7 @@
       <dependency>
         <groupId>io.quarkiverse.fory</groupId>
         <artifactId>quarkus-fory</artifactId>
-        <version>1.7.0</version>
+        <version>2.0.0</version>
         <exclusions>
           <exclusion>
             <groupId>org.checkerframework</groupId>
@@ -7707,7 +7717,7 @@
       <dependency>
         <groupId>io.quarkiverse.fory</groupId>
         <artifactId>quarkus-fory-deployment</artifactId>
-        <version>1.7.0</version>
+        <version>2.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.freemarker</groupId>
@@ -7722,12 +7732,12 @@
       <dependency>
         <groupId>io.quarkiverse.groovy</groupId>
         <artifactId>quarkus-groovy</artifactId>
-        <version>3.40.0</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.groovy</groupId>
         <artifactId>quarkus-groovy-deployment</artifactId>
-        <version>3.40.0</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.jackson-jq</groupId>
@@ -7742,42 +7752,42 @@
       <dependency>
         <groupId>io.quarkiverse.jsch</groupId>
         <artifactId>quarkus-jsch</artifactId>
-        <version>4.0.0.Beta1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.jsch</groupId>
         <artifactId>quarkus-jsch-deployment</artifactId>
-        <version>4.0.0.Beta1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.langchain4j</groupId>
         <artifactId>quarkus-langchain4j-core</artifactId>
-        <version>2.0.0.Beta4</version>
+        <version>2.0.0.CR1</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.langchain4j</groupId>
         <artifactId>quarkus-langchain4j-core-deployment</artifactId>
-        <version>2.0.0.Beta4</version>
+        <version>2.0.0.CR1</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.mcp</groupId>
         <artifactId>quarkus-mcp-server-http</artifactId>
-        <version>2.0.4</version>
+        <version>2.1.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.mcp</groupId>
         <artifactId>quarkus-mcp-server-http-deployment</artifactId>
-        <version>2.0.4</version>
+        <version>2.1.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.messaginghub</groupId>
         <artifactId>quarkus-pooled-jms</artifactId>
-        <version>2.13.0</version>
+        <version>3.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.messaginghub</groupId>
         <artifactId>quarkus-pooled-jms-deployment</artifactId>
-        <version>2.13.0</version>
+        <version>3.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.minio</groupId>
@@ -7792,17 +7802,17 @@
       <dependency>
         <groupId>io.quarkiverse.mybatis</groupId>
         <artifactId>quarkus-mybatis</artifactId>
-        <version>2.4.3</version>
+        <version>3.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.mybatis</groupId>
         <artifactId>quarkus-mybatis-deployment</artifactId>
-        <version>2.4.3</version>
+        <version>3.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.swagger.codegen.v3</groupId>
         <artifactId>swagger-codegen</artifactId>
-        <version>3.0.80</version>
+        <version>3.0.85</version>
         <exclusions>
           <exclusion>
             <groupId>ch.qos.logback</groupId>
@@ -7837,7 +7847,7 @@
       <dependency>
         <groupId>io.swagger.codegen.v3</groupId>
         <artifactId>swagger-codegen-generators</artifactId>
-        <version>1.0.62</version>
+        <version>1.0.63</version>
       </dependency>
       <dependency>
         <groupId>io.swagger.core.v3</groupId>
@@ -7914,7 +7924,7 @@
       <dependency>
         <groupId>org.apache.cassandra</groupId>
         <artifactId>java-driver-query-builder</artifactId>
-        <version>4.19.2</version>
+        <version>4.19.4</version>
         <exclusions>
           <exclusion>
             <groupId>com.github.spotbugs</groupId>
@@ -8110,6 +8120,26 @@
           <exclusion>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-logging</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-logging-otlp</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-otlp</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-prometheus</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk</artifactId>
           </exclusion>
           <exclusion>
             <groupId>org.codehaus.mojo</groupId>
@@ -8443,27 +8473,27 @@
       <dependency>
         <groupId>io.quarkiverse.jgit</groupId>
         <artifactId>quarkus-jgit</artifactId>
-        <version>4.0.0.Beta1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.jgit</groupId>
         <artifactId>quarkus-jgit-deployment</artifactId>
-        <version>4.0.0.Beta1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jgit</groupId>
         <artifactId>org.eclipse.jgit</artifactId>
-        <version>7.8.0.202609011348-r</version>
+        <version>7.8.1.202611041320-r</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jgit</groupId>
         <artifactId>org.eclipse.jgit.lfs</artifactId>
-        <version>7.8.0.202609011348-r</version>
+        <version>7.8.1.202611041320-r</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jgit</groupId>
         <artifactId>org.eclipse.jgit.ssh.jsch</artifactId>
-        <version>7.8.0.202609011348-r</version>
+        <version>7.8.1.202611041320-r</version>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.woodstox</groupId>
@@ -8524,137 +8554,137 @@
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-axiom-api-stub</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-bc-stub</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-deployment</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-integration-tracing-opentelemetry</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-integration-tracing-opentelemetry-deployment</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-jaxb-plugins</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-jaxb-plugins-deployment</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-rt-features-metrics</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-rt-features-metrics-deployment</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-rt-management</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-rt-management-deployment</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-rt-ws-rm</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-rt-ws-rm-deployment</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-rt-ws-security</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-rt-ws-security-deployment</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-saaj</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-saaj-deployment</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-santuario-xmlsec</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-santuario-xmlsec-deployment</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-services-sts</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-services-sts-deployment</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-test-util</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-woodstox</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-woodstox-deployment</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-xjc-plugins</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.quarkiverse.cxf</groupId>
         <artifactId>quarkus-cxf-xjc-plugins-deployment</artifactId>
-        <version>4.0.0.CR1</version>
+        <version>4.0.0</version>
       </dependency>
       <dependency>
         <groupId>jakarta.xml.soap</groupId>
@@ -8700,7 +8730,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-secure-xml</artifactId>
-        <version>1.0.0</version>
+        <version>1.1.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.cxf</groupId>
@@ -8927,17 +8957,17 @@
       <dependency>
         <groupId>org.apache.wss4j</groupId>
         <artifactId>wss4j-bindings</artifactId>
-        <version>4.0.2</version>
+        <version>4.0.3</version>
       </dependency>
       <dependency>
         <groupId>org.apache.wss4j</groupId>
         <artifactId>wss4j-policy</artifactId>
-        <version>4.0.2</version>
+        <version>4.0.3</version>
       </dependency>
       <dependency>
         <groupId>org.apache.wss4j</groupId>
         <artifactId>wss4j-ws-security-common</artifactId>
-        <version>4.0.2</version>
+        <version>4.0.3</version>
         <exclusions>
           <exclusion>
             <groupId>io.dropwizard.metrics</groupId>
@@ -8956,22 +8986,22 @@
       <dependency>
         <groupId>org.apache.wss4j</groupId>
         <artifactId>wss4j-ws-security-dom</artifactId>
-        <version>4.0.2</version>
+        <version>4.0.3</version>
       </dependency>
       <dependency>
         <groupId>org.apache.wss4j</groupId>
         <artifactId>wss4j-ws-security-policy-stax</artifactId>
-        <version>4.0.2</version>
+        <version>4.0.3</version>
       </dependency>
       <dependency>
         <groupId>org.apache.wss4j</groupId>
         <artifactId>wss4j-ws-security-stax</artifactId>
-        <version>4.0.2</version>
+        <version>4.0.3</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.woodstox</groupId>
         <artifactId>stax2-api</artifactId>
-        <version>4.3.1</version>
+        <version>4.3.2</version>
       </dependency>
       <dependency>
         <groupId>org.cryptacular</groupId>
@@ -24497,7 +24527,7 @@
       <dependency>
         <groupId>org.apache.cassandra</groupId>
         <artifactId>java-driver-core</artifactId>
-        <version>4.19.2</version>
+        <version>4.19.4</version>
         <exclusions>
           <exclusion>
             <groupId>io.dropwizard.metrics</groupId>
@@ -24512,7 +24542,7 @@
       <dependency>
         <groupId>org.apache.tinkerpop</groupId>
         <artifactId>gremlin-core</artifactId>
-        <version>3.5.3</version>
+        <version>3.5.6</version>
         <exclusions>
           <exclusion>
             <groupId>com.carrotsearch</groupId>
@@ -24535,12 +24565,12 @@
       <dependency>
         <groupId>org.apache.tinkerpop</groupId>
         <artifactId>tinkergraph-gremlin</artifactId>
-        <version>3.5.3</version>
+        <version>3.5.6</version>
       </dependency>
       <dependency>
         <groupId>com.esri.geometry</groupId>
         <artifactId>esri-geometry-api</artifactId>
-        <version>1.2.1</version>
+        <version>2.2.4</version>
       </dependency>
       <dependency>
         <groupId>com.github.spotbugs</groupId>
@@ -24555,7 +24585,7 @@
       <dependency>
         <groupId>com.datastax.oss.quarkus</groupId>
         <artifactId>cassandra-quarkus-client</artifactId>
-        <version>1.4.1</version>
+        <version>1.5.0</version>
         <exclusions>
           <exclusion>
             <groupId>com.github.spotbugs</groupId>
@@ -24570,52 +24600,52 @@
       <dependency>
         <groupId>com.datastax.oss.quarkus</groupId>
         <artifactId>cassandra-quarkus-client-deployment</artifactId>
-        <version>1.4.1</version>
+        <version>1.5.0</version>
       </dependency>
       <dependency>
         <groupId>com.datastax.oss.quarkus</groupId>
         <artifactId>cassandra-quarkus-test-framework</artifactId>
-        <version>1.4.1</version>
+        <version>1.5.0</version>
       </dependency>
       <dependency>
         <groupId>com.datastax.oss.quarkus</groupId>
         <artifactId>cassandra-quarkus-mapper-processor</artifactId>
-        <version>1.4.1</version>
+        <version>1.5.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.cassandra</groupId>
         <artifactId>java-driver-core-shaded</artifactId>
-        <version>4.19.2</version>
+        <version>4.19.4</version>
       </dependency>
       <dependency>
         <groupId>org.apache.cassandra</groupId>
         <artifactId>java-driver-mapper-processor</artifactId>
-        <version>4.19.2</version>
+        <version>4.19.4</version>
       </dependency>
       <dependency>
         <groupId>org.apache.cassandra</groupId>
         <artifactId>java-driver-mapper-runtime</artifactId>
-        <version>4.19.2</version>
+        <version>4.19.4</version>
       </dependency>
       <dependency>
         <groupId>org.apache.cassandra</groupId>
         <artifactId>java-driver-guava-shaded</artifactId>
-        <version>4.19.2</version>
+        <version>4.19.4</version>
       </dependency>
       <dependency>
         <groupId>org.apache.cassandra</groupId>
         <artifactId>java-driver-test-infra</artifactId>
-        <version>4.19.2</version>
+        <version>4.19.4</version>
       </dependency>
       <dependency>
         <groupId>org.apache.cassandra</groupId>
         <artifactId>java-driver-metrics-micrometer</artifactId>
-        <version>4.19.2</version>
+        <version>4.19.4</version>
       </dependency>
       <dependency>
         <groupId>org.apache.cassandra</groupId>
         <artifactId>java-driver-metrics-microprofile</artifactId>
-        <version>4.19.2</version>
+        <version>4.19.4</version>
       </dependency>
       <dependency>
         <groupId>com.datastax.oss</groupId>
@@ -24625,627 +24655,702 @@
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-core</artifactId>
-        <version>1.23.0</version>
+        <version>1.24.0</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j</artifactId>
-        <version>1.23.0</version>
+        <version>1.24.0</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-core-jackson3</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-jackson3</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-reactive-streaming</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-test</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-http-client</artifactId>
-        <version>1.23.0</version>
+        <version>1.24.0</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-http-client-jdk</artifactId>
-        <version>1.23.0</version>
+        <version>1.24.0</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-http-client-apache</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-http-client-okhttp</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-kotlin</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-reactor</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-easy-rag</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-guardrails</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-anthropic</artifactId>
-        <version>1.23.0</version>
+        <version>1.24.0</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-azure-open-ai</artifactId>
-        <version>1.23.0</version>
+        <version>1.24.0</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-bedrock</artifactId>
-        <version>1.23.0</version>
+        <version>1.24.0</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-cohere</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-hugging-face</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-jlama</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-jina</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-onnx-scoring</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-local-ai</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-mistral-ai</artifactId>
-        <version>1.23.0</version>
+        <version>1.24.0</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-nomic</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-ollama</artifactId>
-        <version>1.23.0</version>
+        <version>1.24.0</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-open-ai</artifactId>
-        <version>1.23.0</version>
+        <version>1.24.0</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-open-ai-official</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-ovh-ai</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-typesafe</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-vertex-ai</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-vertex-ai-gemini</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-vertex-ai-anthropic</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-google-genai</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-google-ai-gemini</artifactId>
-        <version>1.23.0</version>
+        <version>1.24.0</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-workers-ai</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-voyage-ai</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-watsonx</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-gpu-llama3</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-jitllm</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-azure-ai-search</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-azure-cosmos-mongo-vcore</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-azure-documentdb</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-cassandra</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-chroma</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-coherence</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-couchbase</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-elasticsearch</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-hibernate</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-hibernate-milvus</artifactId>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-infinispan</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-mariadb</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-mcp</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-mcp-docker</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-milvus</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-milvus-v2</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-mongodb-atlas</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-opensearch</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-pgvector</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-pinecone</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-qdrant</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-tablestore</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-vespa</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-weaviate</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-azure-cosmos-nosql</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-oracle</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-embeddings-all-minilm-l6-v2</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-embeddings-all-minilm-l6-v2-q</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-embeddings-bge-small-en</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-embeddings-bge-small-en-q</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-embeddings-bge-small-en-v15</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-embeddings-bge-small-en-v15-q</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-embeddings-bge-small-zh-v15</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-embeddings-bge-small-zh-v15-q</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-embeddings-e5-small-v2</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-embeddings-e5-small-v2-q</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-code-execution-engine-graalvm-polyglot</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-code-execution-engine-judge0</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-code-execution-engine-azure-acads</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-document-loader-amazon-s3</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-document-loader-azure-storage-blob</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-document-loader-github</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-document-loader-selenium</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-document-loader-playwright</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-document-loader-tencent-cos</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-document-loader-google-cloud-storage</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-document-parser-apache-pdfbox</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-document-parser-apache-poi</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-document-parser-apache-tika</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-document-parser-markdown</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-document-parser-yaml</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-document-parser-docling</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-document-transformer-jsoup</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-embedding-store-filter-parser-sql</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-web-search-engine-google-custom</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-web-search-engine-tavily</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-web-search-engine-searchapi</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-experimental-sql</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-experimental-hibernate</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-agentic</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-agentic-a2a</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-agentic-mcp</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-agentic-patterns</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-skills</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-micrometer-metrics</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-observation</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-http-client-spring-restclient</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-spring-boot-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-anthropic-spring-boot-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-azure-ai-search-spring-boot-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-azure-cosmos-mongo-vcore-spring-boot-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-azure-cosmos-nosql-spring-boot-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-azure-documentdb-spring-boot-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-azure-open-ai-spring-boot-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-elasticsearch-spring-boot-starter</artifactId>
+        <version>1.24.0-beta34</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-google-ai-gemini-spring-boot-starter</artifactId>
+        <version>1.24.0-beta34</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-milvus-spring-boot-starter</artifactId>
+        <version>1.24.0-beta34</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-mistral-ai-spring-boot-starter</artifactId>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-ollama-spring-boot-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-open-ai-spring-boot-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-open-ai-official-spring-boot-starter</artifactId>
+        <version>1.24.0-beta34</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-vertex-ai-gemini-spring-boot-starter</artifactId>
+        <version>1.24.0-beta34</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-voyage-ai-spring-boot-starter</artifactId>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-http-client-spring-boot4-restclient</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-spring-boot4-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-anthropic-spring-boot4-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-azure-ai-search-spring-boot4-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-azure-cosmos-mongo-vcore-spring-boot4-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-azure-cosmos-nosql-spring-boot4-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-azure-documentdb-spring-boot4-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-azure-open-ai-spring-boot4-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-elasticsearch-spring-boot4-starter</artifactId>
+        <version>1.24.0-beta34</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-google-ai-gemini-spring-boot4-starter</artifactId>
+        <version>1.24.0-beta34</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-milvus-spring-boot4-starter</artifactId>
+        <version>1.24.0-beta34</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-mistral-ai-spring-boot4-starter</artifactId>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-ollama-spring-boot4-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>dev.langchain4j</groupId>
         <artifactId>langchain4j-open-ai-spring-boot4-starter</artifactId>
-        <version>1.23.0-beta33</version>
+        <version>1.24.0-beta34</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-open-ai-official-spring-boot4-starter</artifactId>
+        <version>1.24.0-beta34</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-vertex-ai-gemini-spring-boot4-starter</artifactId>
+        <version>1.24.0-beta34</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-voyage-ai-spring-boot4-starter</artifactId>
+        <version>1.24.0-beta34</version>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>

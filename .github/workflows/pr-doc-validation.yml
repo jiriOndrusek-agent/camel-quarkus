@@ -25,6 +25,7 @@ on:
       - '**.adoc'
       - '!**/README.adoc'
       - 'docs/antora.yml'
+      - '.github/workflows/pr-doc-validation.yml'
 
 concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}
@@ -58,7 +59,6 @@ jobs:
         shell: bash
         run: |
           cd camel-website
-          yarn install
+          yarn install --immutable
           cd ../camel-quarkus/docs
-          yarn install
           ./local-build.sh quick

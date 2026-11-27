@@ -4,7 +4,7 @@
 CDI plays a central role in Quarkus and Camel Quarkus offers a first class support for it too.
 
 You may use `@Inject`, `@ConfigProperty` and similar annotations e.g. to inject beans and configuration values to
-your Camel `RouteBuilder`. Here is the `RouteBuilder` from our `timer-log-cdi` xref:user-guide/examples.adoc[example]:
+your Camel `RouteBuilder`. For example:
 
 [source,java]
 ----
@@ -37,9 +37,9 @@ complex than the one of the plain `RouteBuilder`. In other words, using `@Applic
 with some boot time penalty, and you should therefore only annotate your `RouteBuilder` with `@ApplicationScoped` when
 you really need it.
 
-<2> The value for the `timer.period` property is defined in `src/main/resources/application.properties` of the example project.
+<2> The value for the `timer.period` property can be defined in `src/main/resources/application.properties`.
 
-TIP: Please refer to the https://quarkus.io/blog/quarkus-dependency-injection[Quarkus Dependency Injection guide] for more details.
+TIP: Please refer to the https://quarkus.io/guides/cdi-reference[Quarkus Dependency Injection guide] for more details.
 
 == Accessing `CamelContext`
 
@@ -52,6 +52,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.stream.Collectors;
 import java.util.List;
 import org.apache.camel.CamelContext;
+import org.apache.camel.Route;
 
 @ApplicationScoped
 public class MyBean {
@@ -137,6 +138,7 @@ import org.apache.camel.EndpointInject;
 import org.apache.camel.FluentProducerTemplate;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
+import org.apache.camel.component.direct.DirectEndpoint;
 
 @ApplicationScoped
 class MyBean {
@@ -185,7 +187,7 @@ class MyProduceBean {
     ProduceInterface produceInterface;
 
     void doSomething() {
-        produceInterface.sayHello("Kermit")
+        produceInterface.sayHello("Kermit");
     }
 
 }

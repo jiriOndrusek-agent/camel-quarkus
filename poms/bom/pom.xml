@@ -2618,22 +2618,6 @@
                 <groupId>org.apache.camel</groupId>
                 <artifactId>camel-optaplanner</artifactId>
                 <version>${camel.version}</version>
-                <exclusions>
-                    <!-- TODO: Restore when optaplanner-quarkus > 10.0.0 is available - https://github.com/apache/camel-quarkus/issues/7533
-                    <exclusion>
-                        <groupId>org.optaplanner</groupId>
-                        <artifactId>optaplanner-core</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.optaplanner</groupId>
-                        <artifactId>optaplanner-core-impl</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.optaplanner</groupId>
-                        <artifactId>optaplanner-persistence-common</artifactId>
-                    </exclusion>
-                    -->
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.camel</groupId>
@@ -7656,6 +7640,16 @@
                 <version>${retrofit.version}</version>
             </dependency>
             <dependency>
+                <groupId>com.squareup.wire</groupId>
+                <artifactId>wire-runtime</artifactId>
+                <version>${wire-runtime.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.wire</groupId>
+                <artifactId>wire-runtime-jvm</artifactId>
+                <version>${wire-runtime.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>commons-beanutils</groupId>
                 <artifactId>commons-beanutils</artifactId>
                 <version>${commons-beanutils.version}</version>
@@ -8210,6 +8204,26 @@
                         <artifactId>netty-all</artifactId>
                     </exclusion>
                     <exclusion>
+                        <groupId>io.opentelemetry</groupId>
+                        <artifactId>opentelemetry-exporter-logging</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>io.opentelemetry</groupId>
+                        <artifactId>opentelemetry-exporter-logging-otlp</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>io.opentelemetry</groupId>
+                        <artifactId>opentelemetry-exporter-otlp</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>io.opentelemetry</groupId>
+                        <artifactId>opentelemetry-exporter-prometheus</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>io.opentelemetry</groupId>
+                        <artifactId>opentelemetry-sdk</artifactId>
+                    </exclusion>
+                    <exclusion>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>animal-sniffer-annotations</artifactId>
                     </exclusion>
@@ -8702,6 +8716,7 @@
                                     <ignoredOverlaps>
                                         <ignoredOverlap>org.glassfish.jaxb:jaxb-runtime</ignoredOverlap><!-- Comes from quarkus-cxf-bom -->
                                         <ignoredOverlap>com.fasterxml.woodstox:woodstox-core</ignoredOverlap><!-- Newly managed in quarkus-bom and is also managed in quarkus-cxf-bom -->
+                                        <ignoredOverlap>org.codehaus.woodstox:stax2-api</ignoredOverlap><!-- Newly managed in quarkus-bom and is also managed in quarkus-cxf-bom -->
                                     </ignoredOverlaps>
                                 </configuration>
                             </execution>
